@@ -16,20 +16,34 @@ const leavesSrc = await readFile('app/components/vine-leaves.ts', 'utf8')
 // Pull the literals straight out of the source so this can never drift from
 // what the component actually uses.
 const leaves = [...leavesSrc.matchAll(
-  /\{\s*slug:\s*'([^']+)',[^}]*?cx:\s*(-?[\d.]+),\s*cy:\s*(-?[\d.]+),\s*rx:\s*(-?[\d.]+),\s*ry:\s*(-?[\d.]+),\s*rot:\s*(-?[\d.]+)/g,
+  /\{\s*slug:\s*'([^']+)',[^}]*?cx:\s*(-?[\d.]+),\s*cy:\s*(-?[\d.]+),\s*rx:\s*(-?[\d.]+),\s*ry:\s*(-?[\d.]+),\s*rot:\s*(-?[\d.]+),\s*ax:\s*(-?[\d.]+),\s*ay:\s*(-?[\d.]+),\s*hw:\s*(-?[\d.]+)/g,
 )].map((m) => ({
-  slug: m[1], cx: +m[2], cy: +m[3], rx: +m[4], ry: +m[5], rot: +m[6],
+  slug: m[1], cx: +m[2], cy: +m[3], rx: +m[4], ry: +m[5], rot: +m[6], ax: +m[7], ay: +m[8], hw: +m[9],
 }))
 
 const wreath = leavesSrc.match(/WREATH = \{ cx: (\d+), cy: (\d+), r: (\d+)/)
 const [wcx, wcy, wr] = wreath ? [+wreath[1], +wreath[2], +wreath[3]] : [300, 500, 180]
 
+// Mirrors leafOutline() in vine-leaves.ts.
+function outline(l) {
+  const tx = l.cx * 2 - l.ax, ty = l.cy * 2 - l.ay
+  const dx = tx - l.ax, dy = ty - l.ay
+  const len = Math.hypot(dx, dy) || 1
+  const nx = -dy / len, ny = dx / len
+  const hw = l.hw
+  return `M${l.ax} ${l.ay} Q${l.cx + nx * hw * 2} ${l.cy + ny * hw * 2} ${tx} ${ty} Q${l.cx - nx * hw * 2} ${l.cy - ny * hw * 2} ${l.ax} ${l.ay} Z`
+}
+
 const overlay = leaves.map((l, i) => `
   <ellipse cx="${l.cx}" cy="${l.cy}" rx="${l.rx}" ry="${l.ry}"
     transform="rotate(${l.rot} ${l.cx} ${l.cy})"
-    fill="rgba(255,0,90,0.18)" stroke="#e0005a" stroke-width="2"/>
+    fill="none" stroke="#e0005a" stroke-width="1.5" stroke-dasharray="5 5"/>
+  <path d="${outline(l)}" fill="rgba(0,170,90,0.28)" stroke="#0a6" stroke-width="2"/>
   <text x="${l.cx}" y="${l.cy + 5}" font-size="15" font-family="sans-serif"
-    text-anchor="middle" fill="#c00">${i + 1}.${l.slug}</text>`).join('')
+    text-anchor="middle" fill="#c00">${i + 1}.${l.slug}</text>
+  <!-- growth origin: where the stem meets the vine -->
+  <line x1="${l.ax}" y1="${l.ay}" x2="${l.cx}" y2="${l.cy}" stroke="#06f" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <circle cx="${l.ax}" cy="${l.ay}" r="6" fill="#06f"/>`).join('')
   + `<circle cx="${wcx}" cy="${wcy}" r="${wr}" fill="none" stroke="#0a0" stroke-width="2" stroke-dasharray="8 8"/>`
   + `<circle cx="${wcx}" cy="${wcy}" r="4" fill="#0a0"/>`
 

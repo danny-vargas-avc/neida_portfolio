@@ -50,8 +50,8 @@ const revealState = () =>
     return {
       present: true,
       offset: Math.abs(parseFloat(getComputedStyle(sweep).strokeDashoffset) || 0),
-      // The accent copy only mounts once the reveal has finished.
-      finished: !!document.querySelector('use.tint'),
+      // The colour-fill layer only mounts once the reveal has finished.
+      finished: !!document.querySelector('.tint'),
     }
   })
 
@@ -76,7 +76,7 @@ check(
 
 // --- the reveal runs, and finishes ------------------------------------------
 const start = await revealState()
-check('vine sweep mask present', start.present === true, JSON.stringify(start))
+check('vine reveal spiral present', start.present === true, JSON.stringify(start))
 
 await page
   .waitForFunction(
@@ -97,7 +97,7 @@ await page.waitForTimeout(400)
 await page.locator('#leaf-research').hover({ force: true })
 await page.waitForTimeout(500)
 const tint = await page.evaluate(() => {
-  const t = document.querySelector('use.tint')
+  const t = document.querySelector('.tint')
   return { clip: t?.getAttribute('clip-path'), color: t?.style.color }
 })
 check(

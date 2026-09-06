@@ -25,6 +25,25 @@ export interface Leaf {
   ry: number
   /** Degrees, clockwise. Leaves sit at angles around the wreath. */
   rot: number
+  /**
+   * Where the leaf's stem meets the vine, in the same coordinates.
+   *
+   * This is the origin the leaf grows from on hover. It has to be the stem
+   * junction rather than the leaf's centre: scaling about the centre reads as a
+   * balloon inflating, while scaling about the stem reads as the leaf sprouting
+   * outward along its own axis. Keeping the origin at the junction also means
+   * the stem barely moves, so the growing copy still meets the vine cleanly.
+   */
+  ax: number
+  ay: number
+  /**
+   * Half-width of the blade at its widest, for the growth outline.
+   *
+   * Measured per leaf rather than derived from rx/ry: the ellipse is sized as a
+   * comfortable click target, and a blade narrower or broader than that leaves
+   * either un-erased ink along the leaf's edge or swallows nearby vine.
+   */
+  hw: number
 }
 
 /** Centre and radius of the vine ring, used by the sweep-reveal mask. */
@@ -43,18 +62,55 @@ export const WREATH = { cx: 295, cy: 505, r: 180 } as const
 export const ART_VIEW = { x: 13, y: 221, width: 585, height: 547 } as const
 
 /**
+ * The outline of a leaf blade, as an SVG path.
+ *
+ * A lens — pointed at the stem, pointed at the tip, widest in the middle — is
+ * close to the real shape of these leaves, and much tighter than the ellipse
+ * used for the hit area. That matters for the two leaves that sit INSIDE the
+ * wreath (cake and florals): an ellipse around them also encloses lengths of
+ * vine, which would then be recoloured and dragged along when the leaf grows.
+ *
+ * Built from the stem junction and the blade centre, so it stays correct as
+ * long as those two are measured properly.
+ */
+export function leafOutline(leaf: Leaf): string {
+  const { ax, ay, cx, cy } = leaf
+  // The blade centre is halfway along, so the tip is the same distance again.
+  const tx = cx * 2 - ax
+  const ty = cy * 2 - ay
+
+  const dx = tx - ax
+  const dy = ty - ay
+  const len = Math.hypot(dx, dy) || 1
+  // Unit normal to the midrib.
+  const nx = -dy / len
+  const ny = dx / len
+
+  // Widest at the middle. A quadratic reaches half its control offset at t=0.5,
+  // so the control points sit twice the half-width off the midrib.
+  const halfWidth = leaf.hw
+  const c1x = cx + nx * halfWidth * 2
+  const c1y = cy + ny * halfWidth * 2
+  const c2x = cx - nx * halfWidth * 2
+  const c2y = cy - ny * halfWidth * 2
+
+  const r = (n: number) => Math.round(n * 10) / 10
+  return `M${r(ax)} ${r(ay)} Q${r(c1x)} ${r(c1y)} ${r(tx)} ${r(ty)} Q${r(c2x)} ${r(c2y)} ${r(ax)} ${r(ay)} Z`
+}
+
+/**
  * Ordered by angle clockwise from the top of the wreath, which is the order the
  * reveal sweep uncovers them and therefore the order arrow keys walk. Florals
  * and cake sit inside the ring rather than out on the rim, so they fall between
  * their neighbours by angle rather than by distance.
  */
 export const LEAVES: Leaf[] = [
-  { slug: 'clay', label: 'Clay', cx: 388, cy: 268, rx: 78, ry: 42, rot: -18 },
-  { slug: 'florals', label: 'Florals', cx: 335, cy: 468, rx: 52, ry: 34, rot: -52 },
-  { slug: 'film', label: 'Film', cx: 520, cy: 426, rx: 66, ry: 38, rot: 10 },
-  { slug: 'education', label: 'Education', cx: 450, cy: 690, rx: 34, ry: 56, rot: 8 },
-  { slug: 'cake', label: 'Cake', cx: 322, cy: 604, rx: 46, ry: 34, rot: -62 },
-  { slug: 'research', label: 'Research', cx: 232, cy: 730, rx: 62, ry: 34, rot: -12 },
-  { slug: 'drawings', label: 'Drawings', cx: 90, cy: 592, rx: 60, ry: 28, rot: -6 },
-  { slug: 'textiles', label: 'Textiles', cx: 132, cy: 330, rx: 38, ry: 78, rot: -8 },
+  { slug: 'clay', label: 'Clay', cx: 390, cy: 272, rx: 94, ry: 48, rot: -28, ax: 322, ay: 312, hw: 47 },
+  { slug: 'florals', label: 'Florals', cx: 336, cy: 466, rx: 64, ry: 42, rot: -50, ax: 300, ay: 508, hw: 35 },
+  { slug: 'film', label: 'Film', cx: 524, cy: 430, rx: 80, ry: 46, rot: 8, ax: 458, ay: 432, hw: 44 },
+  { slug: 'education', label: 'Education', cx: 450, cy: 692, rx: 42, ry: 68, rot: 8, ax: 444, ay: 636, hw: 33 },
+  { slug: 'cake', label: 'Cake', cx: 322, cy: 604, rx: 58, ry: 42, rot: -62, ax: 348, ay: 646, hw: 37 },
+  { slug: 'research', label: 'Research', cx: 232, cy: 730, rx: 75, ry: 42, rot: -12, ax: 292, ay: 716, hw: 37 },
+  { slug: 'drawings', label: 'Drawings', cx: 90, cy: 592, rx: 72, ry: 36, rot: -6, ax: 148, ay: 588, hw: 31 },
+  { slug: 'textiles', label: 'Textiles', cx: 132, cy: 330, rx: 46, ry: 92, rot: -8, ax: 148, ay: 402, hw: 35 },
 ]
