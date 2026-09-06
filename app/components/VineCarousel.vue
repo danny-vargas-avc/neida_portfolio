@@ -7,10 +7,16 @@
  * line" trick: there are no strokes to walk along. Both animations here are
  * therefore done by animating masks, which don't care what they cover.
  *
- * OPENING REVEAL. A mask holding an Archimedean spiral, stroked wide enough that
- * consecutive turns overlap, with its dash offset animated. The reveal starts at
- * the centre of the wreath and unwinds clockwise and outward along the vine,
- * rather than a pie-wedge uncovering the whole radius at one bearing at once.
+ * OPENING REVEAL. A mask holding one wide-stroked path that runs from the centre
+ * of the wreath out through every leaf in turn, with its dash offset animated,
+ * so the drawing uncovers along that route.
+ *
+ * The route is listed explicitly in REVEAL_ORDER rather than derived. The leaves
+ * do not come in compass order — by bearing from the centre, film (-18 degrees)
+ * and education (50) fall between florals (-44) and cake (75) — so neither an
+ * angular wedge nor a mathematical spiral can produce the order the vine itself
+ * follows. Walking the listed leaves still reads as a spiral, because that route
+ * genuinely winds outward from the middle.
  *
  * LEAF FILL. A copy of the drawing, clipped to the leaf's blade and tinted,
  * revealed by a soft band travelling from the stem junction to the tip — colour
@@ -64,63 +70,106 @@ const artInner = vineRaw
   .replace(/fill="#000000"/g, 'fill="currentColor"')
 
 /**
- * Which leaf the opening reveal starts on. The spiral begins at the wreath
- * centre on this leaf's bearing and unwinds clockwise, so leaves arrive in the
- * order they sit around the ring.
+ * The order the reveal travels through the leaves — the vine's own path, which
+ * is not the same as their order by bearing from the centre. Change this and the
+ * opening animation follows the new route; nothing else needs touching.
  */
-const REVEAL_START_SLUG = 'florals'
+const REVEAL_ORDER = [
+  'florals',
+  'cake',
+  'drawings',
+  'textiles',
+  'clay',
+  'film',
+  'education',
+  'research',
+] as const
 
 /**
- * Opening-reveal spiral. It has to reach past the furthest leaf tip, and the
- * stroke must be wider than the gap between turns or the reveal leaves
- * unpainted rings behind it.
+ * Width of the revealing stroke. Wide enough that the vine running between two
+ * leaves is uncovered as the path passes, without being so wide that it gives
+ * away the next leaf early.
+ *
+ * The stroke uses a butt linecap, not round: a round cap paints a full disc even
+ * at zero dash length, which left a circle of vine already showing at the centre
+ * before the reveal had started.
+ *
+ * Kept fairly tight, because a wider stroke reaches sideways onto vine belonging
+ * to leaves the route has not arrived at yet — research's stem in particular was
+ * appearing while the reveal was still elsewhere.
  */
-const SPIRAL_MAX_R = 350
-const SPIRAL_TURNS = 2.1
-const SPIRAL_W = (SPIRAL_MAX_R / SPIRAL_TURNS) * 1.3
+const REVEAL_W = 158
 
 /** How far behind the stem the colour wash begins, so the join is covered. */
 const FRONT_BACKSET = 14
 
-/** Bearing of the starting leaf from the wreath centre, in degrees. */
-const revealStartAngle = (() => {
-  const leaf = LEAVES.find((l) => l.slug === REVEAL_START_SLUG)
-  if (!leaf) return -90
-  return (Math.atan2(leaf.cy - WREATH.cy, leaf.cx - WREATH.cx) * 180) / Math.PI
-})()
-
 /**
- * The reveal spiral, and its length.
+ * The reveal route, and its length.
  *
- * The length is summed from the polyline as it is built rather than read back
- * with getTotalLength(), so the dash values are identical on the server and the
- * client and the pre-animation hidden state can be set from CSS without a flash
- * of the finished drawing.
+ * Leaf centres are joined with a Catmull-Rom spline so the path curves through
+ * them instead of zig-zagging, then sampled to a polyline. Sampling gives the
+ * length for free: summing it here rather than reading getTotalLength() back
+ * from the DOM keeps the dash values identical on the server and the client, so
+ * the pre-animation hidden state can be set from CSS without flashing the
+ * finished drawing.
  */
-const spiral = (() => {
-  const startRad = (revealStartAngle * Math.PI) / 180
-  const total = SPIRAL_TURNS * Math.PI * 2
-  const a = SPIRAL_MAX_R / total
-  const steps = Math.ceil(SPIRAL_TURNS * 72)
+const reveal = (() => {
+  // Start at the middle of the wreath, then out through each leaf in turn.
+  const pts: [number, number][] = [[WREATH.cx, WREATH.cy]]
+  for (const slug of REVEAL_ORDER) {
+    const leaf = LEAVES.find((l) => l.slug === slug)
+    if (leaf) pts.push([leaf.cx, leaf.cy])
+  }
+
+  // Run on past the final leaf. The route otherwise stops at its centre, and a
+  // butt-capped stroke ends there too, leaving the outer half of that blade
+  // never uncovered. The blade centre is halfway along, so 2.6x the stem-to-
+  // centre vector clears the tip with margin.
+  const last = LEAVES.find((l) => l.slug === REVEAL_ORDER[REVEAL_ORDER.length - 1])
+  if (last) {
+    pts.push([
+      last.ax + (last.cx - last.ax) * 2.6,
+      last.ay + (last.cy - last.ay) * 2.6,
+    ])
+  }
+
+  const at = (i: number) => pts[Math.max(0, Math.min(pts.length - 1, i))]!
+  const SEGMENTS = 24
 
   let d = ''
   let length = 0
   let px = 0
   let py = 0
 
-  for (let i = 0; i <= steps; i++) {
-    const th = (i / steps) * total
-    const r = a * th
-    const x = WREATH.cx + Math.cos(th + startRad) * r
-    const y = WREATH.cy + Math.sin(th + startRad) * r
-    if (i === 0) {
-      d = `M${x.toFixed(1)} ${y.toFixed(1)}`
-    } else {
-      d += `L${x.toFixed(1)} ${y.toFixed(1)}`
-      length += Math.hypot(x - px, y - py)
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [x0, y0] = at(i - 1)
+    const [x1, y1] = at(i)
+    const [x2, y2] = at(i + 1)
+    const [x3, y3] = at(i + 2)
+
+    for (let step = 0; step <= SEGMENTS; step++) {
+      if (i > 0 && step === 0) continue // the previous segment ended here
+      const t = step / SEGMENTS
+      const t2 = t * t
+      const t3 = t2 * t
+
+      // Catmull-Rom basis, tension 0.5.
+      const x =
+        0.5 *
+        (2 * x1 + (-x0 + x2) * t + (2 * x0 - 5 * x1 + 4 * x2 - x3) * t2 + (-x0 + 3 * x1 - 3 * x2 + x3) * t3)
+      const y =
+        0.5 *
+        (2 * y1 + (-y0 + y2) * t + (2 * y0 - 5 * y1 + 4 * y2 - y3) * t2 + (-y0 + 3 * y1 - 3 * y2 + y3) * t3)
+
+      if (d === '') {
+        d = `M${x.toFixed(1)} ${y.toFixed(1)}`
+      } else {
+        d += `L${x.toFixed(1)} ${y.toFixed(1)}`
+        length += Math.hypot(x - px, y - py)
+      }
+      px = x
+      py = y
     }
-    px = x
-    py = y
   }
   return { d, length: Math.ceil(length) }
 })()
@@ -285,10 +334,10 @@ function playReveal() {
     },
   })
 
-  gsap.set(el, { strokeDashoffset: spiral.length })
+  gsap.set(el, { strokeDashoffset: reveal.length })
   revealTl
-    .fromTo(wrapper.value, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'power1.out' }, 0)
-    .to(el, { strokeDashoffset: 0, duration: 2.8, ease: 'power1.inOut' }, 0)
+    .fromTo(wrapper.value, { opacity: 0 }, { opacity: 1, duration: 0.6, ease: 'power1.out' }, 0)
+    .to(el, { strokeDashoffset: 0, duration: 4.4, ease: 'power1.inOut' }, 0)
     // A last settle, so the finished drawing lands rather than simply stopping.
     .fromTo(
       wrapper.value,
@@ -367,7 +416,7 @@ onBeforeUnmount(() => {
       It is a custom property rather than the real stroke-dashoffset so that
       GSAP's inline style still wins once the reveal starts.
     -->
-    <div ref="wrapper" class="vine" :style="{ '--sweep-c': String(spiral.length) }">
+    <div ref="wrapper" class="vine" :style="{ '--sweep-c': String(reveal.length) }">
       <svg
         class="art"
         :viewBox="`${ART_VIEW.x} ${ART_VIEW.y} ${ART_VIEW.width} ${ART_VIEW.height}`"
@@ -399,13 +448,13 @@ onBeforeUnmount(() => {
             <path
               ref="sweep"
               class="vine-sweep"
-              :d="spiral.d"
+              :d="reveal.d"
+              stroke-linecap="butt"
               fill="none"
               stroke="#fff"
-              :stroke-width="SPIRAL_W"
-              stroke-linecap="round"
+              :stroke-width="REVEAL_W"
               stroke-linejoin="round"
-              :stroke-dasharray="spiral.length"
+              :stroke-dasharray="reveal.length"
               stroke-dashoffset="0"
             />
           </mask>

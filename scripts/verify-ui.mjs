@@ -76,7 +76,7 @@ check(
 
 // --- the reveal runs, and finishes ------------------------------------------
 const start = await revealState()
-check('vine reveal spiral present', start.present === true, JSON.stringify(start))
+check('vine reveal path present', start.present === true, JSON.stringify(start))
 
 await page
   .waitForFunction(
@@ -105,6 +105,30 @@ check(
   !!tint.clip?.includes('research') && !!tint.color && tint.color !== '',
   JSON.stringify(tint),
 )
+
+// --- the reveal follows the vine's own route -------------------------------
+const revealOrder = await page.evaluate(() => {
+  const path = document.querySelector('.vine-sweep')
+  const half = +path.getAttribute('stroke-width') / 2
+  const total = path.getTotalLength()
+  const slugs = [...document.querySelectorAll('[role="tab"]')].map((b) => b.id.replace('leaf-', ''))
+  const centre = {}
+  for (const s of slugs) {
+    const bb = document.querySelector(`clipPath[id$="-${s}"] path`).getBBox()
+    centre[s] = [bb.x + bb.width / 2, bb.y + bb.height / 2]
+  }
+  const first = {}
+  for (let i = 0; i <= 800; i++) {
+    const at = path.getPointAtLength((i / 800) * total)
+    for (const s of slugs) {
+      if (first[s] !== undefined) continue
+      if (Math.hypot(at.x - centre[s][0], at.y - centre[s][1]) <= half) first[s] = i / 800
+    }
+  }
+  return Object.entries(first).sort((a, b) => a[1] - b[1]).map((e) => e[0])
+})
+const WANTED = 'florals,cake,drawings,textiles,clay,film,education,research'
+check('reveal visits leaves in vine order', revealOrder.join(',') === WANTED, revealOrder.join(','))
 
 // --- carousel selection swaps the panel -------------------------------------
 // The leaf hit areas are rotated and overlap the artwork, so dispatch the click
