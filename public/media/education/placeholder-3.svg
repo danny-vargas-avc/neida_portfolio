@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" role="img">
+  <defs>
+    <clipPath id="c"><rect width="1000" height="1000" rx="0"/></clipPath>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="31193"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.055"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <g clip-path="url(#c)">
+    <rect width="1000" height="1000" fill="#f4f3f0"/>
+    <ellipse cx="648.9" cy="518.0" rx="186.0" ry="102.0" fill="#aec3b6" opacity="0.62" transform="rotate(6.9 648.9 518.0)"/>
+    <ellipse cx="519.3" cy="648.7" rx="186.0" ry="102.0" fill="#4a7a5c" opacity="0.62" transform="rotate(82.6 519.3 648.7)"/>
+    <ellipse cx="373.3" cy="580.2" rx="186.0" ry="102.0" fill="#aec3b6" opacity="0.62" transform="rotate(147.7 373.3 580.2)"/>
+    <ellipse cx="387.4" cy="400.9" rx="186.0" ry="102.0" fill="#4a7a5c" opacity="0.62" transform="rotate(221.3 387.4 400.9)"/>
+    <ellipse cx="572.9" cy="368.9" rx="186.0" ry="102.0" fill="#aec3b6" opacity="0.62" transform="rotate(299.1 572.9 368.9)"/>
+    <circle cx="500" cy="500" r="60.0" fill="#385c45" opacity="0.85"/>
+    <rect width="1000" height="1000" filter="url(#grain)" opacity="0.85"/>
+  </g>
+</svg>

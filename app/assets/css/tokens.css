@@ -1,0 +1,113 @@
+/**
+ * Design tokens
+ *
+ * A quiet gallery: near-white ground, soft ink, and one accent per section
+ * used sparingly. The work is the loud part; the interface is not.
+ *
+ * Selecting a section in the carousel rewrites `--accent` on :root. Everything
+ * downstream reads that variable, so re-theming the page is a ONE-property
+ * change rather than a cascade of overrides.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* --- ground ------------------------------------------------------------ */
+  --paper: #fdfdfc;
+  --paper-sunk: #f4f3f0;
+  --paper-raised: #ffffff;
+  --paper-edge: #e6e4df;
+
+  /* --- ink: soft near-black, never #000 ---------------------------------- */
+  --ink: #1b1a18;
+  --ink-soft: #6e6a63;
+  --ink-faint: #a5a098;
+
+  /* --- per-section accents -----------------------------------------------
+   * One per leaf on Neida's vine. Desaturated on purpose: at full chroma they
+   * fight the photography, and muted they read as a wash of light rather than
+   * as branding. Hues are spaced around the wheel so eight neighbouring leaves
+   * stay tellable apart.                                                     */
+  --accent-florals: #b8607f;   /* 335° rose      */
+  --accent-clay: #b5674a;      /*  18° terracotta */
+  --accent-cake: #98763f;      /*  42° dark gold  */
+  --accent-textiles: #6f7a4b;  /*  75° olive      */
+  --accent-education: #4a7a5c; /* 145° green      */
+  --accent-research: #34706c;  /* 175° teal       */
+  --accent-film: #4a6b8c;      /* 210° steel blue */
+  --accent-drawings: #6a5d8f;  /* 260° violet     */
+
+  /* Live accent. The vine sets this on selection. */
+  --accent: var(--accent-clay);
+  --accent-wash: color-mix(in oklab, var(--accent) 8%, transparent);
+  --accent-glow: color-mix(in oklab, var(--accent) 22%, transparent);
+
+  /* --- type --------------------------------------------------------------
+   * Fraunces (light, lowercase) for headings gives warmth without shouting;
+   * Karla carries body copy and the long-form research/writing lists.       */
+  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --font-body: 'Karla', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Fluid scale — no breakpoint juggling. */
+  --step--2: clamp(0.72rem, 0.7rem + 0.1vw, 0.78rem);
+  --step--1: clamp(0.83rem, 0.79rem + 0.18vw, 0.94rem);
+  --step-0: clamp(1rem, 0.95rem + 0.25vw, 1.13rem);
+  --step-1: clamp(1.2rem, 1.11rem + 0.44vw, 1.5rem);
+  --step-2: clamp(1.44rem, 1.29rem + 0.74vw, 2rem);
+  --step-3: clamp(1.73rem, 1.49rem + 1.19vw, 2.66rem);
+  --step-4: clamp(2.07rem, 1.71rem + 1.83vw, 3.55rem);
+  --step-5: clamp(2.49rem, 1.94rem + 2.74vw, 4.73rem);
+
+  /* --- space -------------------------------------------------------------
+   * Generous by default. Whitespace is the main design device here.         */
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-s: 0.75rem;
+  --space-m: 1.25rem;
+  --space-l: 2rem;
+  --space-xl: 3.5rem;
+  --space-2xl: 6rem;
+  --space-3xl: 9rem;
+
+  /* --- surface ----------------------------------------------------------- */
+  --radius-s: 3px;
+  --radius-m: 8px;
+  --radius-l: 16px;
+  --shadow-lift: 0 1px 2px rgb(27 26 24 / 4%), 0 8px 24px rgb(27 26 24 / 6%);
+  --shadow-deep: 0 2px 6px rgb(27 26 24 / 6%), 0 24px 60px rgb(27 26 24 / 12%);
+
+  /* --- motion ------------------------------------------------------------ */
+  --ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.55, 0, 0.65, 0.2);
+  --dur-fast: 160ms;
+  --dur-med: 380ms;
+  --dur-slow: 720ms;
+
+  --measure: 64ch;
+  --shell-max: 1320px;
+}
+
+/**
+ * Motion kill-switch.
+ *
+ * Every CSS duration resolves through these tokens, so this genuinely stops
+ * motion rather than merely shortening it. JS-driven motion (GSAP carousel,
+ * line-draw, drift) is gated separately in useReducedMotion.ts — CSS alone
+ * cannot reach those.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-med: 0ms;
+    --dur-slow: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

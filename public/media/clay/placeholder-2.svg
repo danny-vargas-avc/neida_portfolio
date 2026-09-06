@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img">
+  <defs>
+    <clipPath id="c"><rect width="1200" height="900" rx="0"/></clipPath>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="14701"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.055"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <g clip-path="url(#c)">
+    <rect width="1200" height="900" fill="#f4f3f0"/>
+    <circle cx="600" cy="558" r="378" fill="none" stroke="#884d38" stroke-width="31.500000000000004" opacity="0.75"/>
+    <circle cx="600" cy="558" r="315" fill="none" stroke="#b5674a" stroke-width="31.500000000000004" opacity="0.6666666666666667"/>
+    <circle cx="600" cy="558" r="252" fill="none" stroke="#884d38" stroke-width="31.500000000000004" opacity="0.5833333333333333"/>
+    <circle cx="600" cy="558" r="189" fill="none" stroke="#b5674a" stroke-width="31.500000000000004" opacity="0.5"/>
+    <circle cx="600" cy="558" r="126" fill="none" stroke="#884d38" stroke-width="31.500000000000004" opacity="0.41666666666666663"/>
+    <circle cx="600" cy="558" r="63" fill="none" stroke="#b5674a" stroke-width="31.500000000000004" opacity="0.3333333333333333"/>
+    <rect width="1200" height="900" filter="url(#grain)" opacity="0.85"/>
+  </g>
+</svg>

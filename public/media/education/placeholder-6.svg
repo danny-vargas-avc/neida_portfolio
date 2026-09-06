@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" role="img">
+  <defs>
+    <clipPath id="c"><rect width="1000" height="1000" rx="0"/></clipPath>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="31286"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.055"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <g clip-path="url(#c)">
+    <rect width="1000" height="1000" fill="#f4f3f0"/>
+    <path d="M738.3 364.0Q770.2 500.0 704.1 590.9Q638.1 681.8 535.0 747.7Q431.8 813.6 317.1 732.1Q202.4 650.5 223.7 510.7Q244.9 371.0 340.0 286.3Q435.1 201.5 570.8 214.8Q706.5 228.1 738.3 364.0Z" fill="#aec3b6" opacity="0.55" transform="rotate(-3.0 500 500) translate(40 30)"/>
+    <path d="M738.3 364.0Q770.2 500.0 704.1 590.9Q638.1 681.8 535.0 747.7Q431.8 813.6 317.1 732.1Q202.4 650.5 223.7 510.7Q244.9 371.0 340.0 286.3Q435.1 201.5 570.8 214.8Q706.5 228.1 738.3 364.0Z" fill="#4a7a5c" opacity="0.8"/>
+    <rect width="1000" height="1000" filter="url(#grain)" opacity="0.85"/>
+  </g>
+</svg>

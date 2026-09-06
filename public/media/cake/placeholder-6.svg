@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" role="img">
+  <defs>
+    <clipPath id="c"><rect width="1000" height="1000" rx="0"/></clipPath>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="14174"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.055"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <g clip-path="url(#c)">
+    <rect width="1000" height="1000" fill="#f4f3f0"/>
+    <rect x="266" y="220" width="468" height="36" rx="18" fill="#d1c1a9" opacity="0.45"/>
+    <rect x="260" y="306" width="480" height="36" rx="18" fill="#98763f" opacity="0.51"/>
+    <rect x="174" y="391" width="652" height="36" rx="18" fill="#d1c1a9" opacity="0.58"/>
+    <rect x="260" y="477" width="479" height="36" rx="18" fill="#98763f" opacity="0.64"/>
+    <rect x="228" y="563" width="544" height="36" rx="18" fill="#d1c1a9" opacity="0.71"/>
+    <rect x="258" y="649" width="484" height="36" rx="18" fill="#98763f" opacity="0.77"/>
+    <rect x="151" y="734" width="699" height="36" rx="18" fill="#d1c1a9" opacity="0.84"/>
+    <rect width="1000" height="1000" filter="url(#grain)" opacity="0.85"/>
+  </g>
+</svg>

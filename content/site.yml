@@ -1,0 +1,29 @@
+# Site-wide identity.
+# Neida: this file holds your name, intro and contact details. Edit the text
+# between the quotes — nothing else needs to change.
+
+name: 'Neida Rodriguez'
+role: 'maker · artist · researcher'
+
+# Appears under your name at the top of the page. Keep it to a sentence or two.
+# TODO(neida): replace with your own words.
+intro: >-
+  I work with flowers, dough, ink and evidence.
+
+# The longer "about" text near the bottom of the page.
+# TODO(neida): replace with your own words.
+about: >-
+  Placeholder. This is where you introduce yourself properly — how these
+  different practices connect, what you are working on now, and what you would
+  like people to get in touch about.
+
+email: '' # TODO(neida): add to show a contact link
+location: '' # TODO(neida): e.g. "Brooklyn, NY"
+
+links: []
+# Example — uncomment and edit:
+# links:
+#   - label: 'Instagram'
+#     url: 'https://instagram.com/…'
+#   - label: 'Google Scholar'
+#     url: 'https://scholar.google.com/…'

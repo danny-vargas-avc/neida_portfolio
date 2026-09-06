@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" width="900" height="1200" role="img">
+  <defs>
+    <clipPath id="c"><rect width="900" height="1200" rx="0"/></clipPath>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="14732"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.055"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <g clip-path="url(#c)">
+    <rect width="900" height="1200" fill="#f4f3f0"/>
+    <ellipse cx="584.3" cy="614.2" rx="167.4" ry="91.8" fill="#aebccb" opacity="0.62" transform="rotate(6.0 584.3 614.2)"/>
+    <ellipse cx="512.9" cy="719.4" rx="167.4" ry="91.8" fill="#4a6b8c" opacity="0.62" transform="rotate(62.2 512.9 719.4)"/>
+    <ellipse cx="394.6" cy="723.1" rx="167.4" ry="91.8" fill="#aebccb" opacity="0.62" transform="rotate(114.2 394.6 723.1)"/>
+    <ellipse cx="320.9" cy="639.4" rx="167.4" ry="91.8" fill="#4a6b8c" opacity="0.62" transform="rotate(163.1 320.9 639.4)"/>
+    <ellipse cx="340.8" cy="520.6" rx="167.4" ry="91.8" fill="#aebccb" opacity="0.62" transform="rotate(216.0 340.8 520.6)"/>
+    <ellipse cx="430.1" cy="466.5" rx="167.4" ry="91.8" fill="#4a6b8c" opacity="0.62" transform="rotate(261.5 430.1 466.5)"/>
+    <ellipse cx="542.4" cy="501.6" rx="167.4" ry="91.8" fill="#aebccb" opacity="0.62" transform="rotate(313.2 542.4 501.6)"/>
+    <circle cx="450" cy="600" r="54.0" fill="#385069" opacity="0.85"/>
+    <rect width="900" height="1200" filter="url(#grain)" opacity="0.85"/>
+  </g>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img">
+  <defs>
+    <clipPath id="c"><rect width="1200" height="900" rx="0"/></clipPath>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="14763"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.055"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <g clip-path="url(#c)">
+    <rect width="1200" height="900" fill="#f4f3f0"/>
+    <circle cx="565.062434792766" cy="450" r="432.2367912530287" fill="#aebccb" opacity="0.5"/>
+    <circle cx="586.0249739171064" cy="385.9649198143661" r="320.1754009281694" fill="#4a6b8c" opacity="0.85"/>
+    <circle cx="489.9723536386556" cy="289.9122995359153" r="89.64911225988743" fill="#c9d3dd" opacity="0.7"/>
+    <rect width="1200" height="900" filter="url(#grain)" opacity="0.85"/>
+  </g>
+</svg>
