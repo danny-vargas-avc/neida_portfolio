@@ -4,7 +4,7 @@
  * A quiet gallery: near-white ground, soft ink, and one accent per section
  * used sparingly. The work is the loud part; the interface is not.
  *
- * Selecting a section in the carousel rewrites `--accent` on :root. Everything
+ * Selecting a section rewrites `--accent` on :root. Everything
  * downstream reads that variable, so re-theming the page is a ONE-property
  * change rather than a cascade of overrides.
  */
@@ -83,6 +83,12 @@
   --dur-med: 380ms;
   --dur-slow: 720ms;
 
+  /**
+   * How long the vine takes to fade in. Read by VineCarousel to time the idle
+   * drift, so the two can't drift apart — keep it in SECONDS.
+   */
+  --vine-enter: 4.5s;
+
   --measure: 64ch;
   --shell-max: 1320px;
 }
@@ -91,9 +97,8 @@
  * Motion kill-switch.
  *
  * Every CSS duration resolves through these tokens, so this genuinely stops
- * motion rather than merely shortening it. JS-driven motion (GSAP carousel,
- * line-draw, drift) is gated separately in useReducedMotion.ts — CSS alone
- * cannot reach those.
+ * motion rather than merely shortening it. The vine's idle drift is GSAP, which
+ * CSS cannot reach, and is gated separately via useReducedMotion.ts.
  */
 @media (prefers-reduced-motion: reduce) {
   :root {

@@ -99,7 +99,7 @@ button {
 }
 
 html.js .vine {
-  animation: vine-enter 2.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: vine-enter var(--vine-enter) cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Visually hidden, still read aloud. */

@@ -80,6 +80,14 @@ const tintColor = computed(() =>
 
 let idle: gsap.core.Timeline | null = null
 
+/** Length of the CSS entrance, in seconds, from the --vine-enter token. */
+function enterSeconds() {
+  if (!import.meta.client) return 0
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--vine-enter')
+  const parsed = Number.parseFloat(raw)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 4.5
+}
+
 /**
  * Slow breathing rotation — enough to feel alive, small enough to keep the
  * leaves easy to hit.
@@ -152,10 +160,11 @@ function hitStyle(leaf: Leaf) {
 }
 
 onMounted(() => {
-  // The entrance is a CSS animation on .vine (2.6s, see base.css); hold the
-  // drift until it has finished so the two never transform the same element at
-  // once. Keep this in step with that duration.
-  gsap.delayedCall(reduced.value ? 0 : 2.7, startIdle)
+  // The entrance is a CSS animation on .vine. Hold the drift until it has
+  // finished, or the two transform the same element at once and the vine jumps.
+  // The duration is read from --vine-enter rather than repeated here, so
+  // changing the fade in CSS cannot leave this stale.
+  gsap.delayedCall(reduced.value ? 0 : enterSeconds() + 0.1, startIdle)
 })
 
 // The OS setting can flip while the page is open; drop the loop if it does.
