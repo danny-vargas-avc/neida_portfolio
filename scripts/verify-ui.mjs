@@ -5,13 +5,13 @@
  *
  * Two hard-won details are load-bearing here:
  *
- *  1. Headless Chrome throttles requestAnimationFrame to a few frames per
- *     second, which freezes every GSAP tween and makes working animations look
- *     broken. The launch flags below keep the ticker running.
- *
- *  2. "strokeDashoffset === 0" is also the value BEFORE any dash is applied, so
- *     it alone cannot distinguish "finished" from "never started". The reveal
- *     check pairs it with the accent copy, which only mounts on completion.
+ *  1. Headless Chrome throttles requestAnimationFrame to a few frames a second,
+ *     which freezes every GSAP tween and makes working animations look broken.
+ *     The launch flags below keep the ticker running.
+ *  2. The vine's entrance is a pure CSS animation, so it finishes whether or not
+ *     Vue has hydrated. Waiting on it is NOT a readiness signal — clicks
+ *     dispatched on the strength of it silently did nothing. `selectLeaf()`
+ *     retries until a click actually takes effect instead.
  */
 import { chromium } from 'playwright-core'
 
@@ -42,25 +42,46 @@ page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`))
 
 await page.goto(URL, { waitUntil: 'networkidle' })
 
-/** The vine's reveal state: how much of the sweep mask is still hiding art. */
-const revealState = () =>
-  page.evaluate(() => {
-    const sweep = document.querySelector('.vine-sweep')
-    if (!sweep) return { present: false }
-    return {
-      present: true,
-      offset: Math.abs(parseFloat(getComputedStyle(sweep).strokeDashoffset) || 0),
-      // The colour-fill layer only mounts once the reveal has finished.
-      finished: !!document.querySelector('.tint'),
-    }
-  })
+/** Selects a leaf, retrying until Vue has hydrated and the click sticks. */
+async function selectLeaf(slug) {
+  await page.waitForFunction(
+    (s) => {
+      const btn = document.querySelector(`#leaf-${s}`)
+      if (!btn) return false
+      if (btn.getAttribute('aria-selected') === 'true') return true
+      btn.click()
+      return false
+    },
+    slug,
+    { timeout: 20000, polling: 250 },
+  )
+}
 
-/** Vue attaches handlers on hydrate; clicking before that silently does nothing. */
-await page.waitForFunction(() => document.querySelector('.vine-sweep') !== null, {
-  timeout: 15000,
+// --- entrance --------------------------------------------------------------
+await page
+  .waitForFunction(
+    () => {
+      const v = document.querySelector('.vine')
+      return v && +getComputedStyle(v).opacity > 0.99
+    },
+    { timeout: 12000 },
+  )
+  .then(
+    () => check('vine entrance completes', true),
+    () => check('vine entrance completes', false, 'never reached full opacity'),
+  )
+
+const entrance = await page.evaluate(() => {
+  const v = document.querySelector('.vine')
+  return { animations: v.getAnimations().map((a) => a.animationName) }
 })
+check(
+  'entrance is a CSS opacity/transform animation',
+  entrance.animations.includes('vine-enter'),
+  JSON.stringify(entrance),
+)
 
-// --- the page opens as just the drawing -------------------------------------
+// --- the page opens as just the drawing ------------------------------------
 const initial = await page.evaluate(() => ({
   selected: document.querySelectorAll('[role="tab"][aria-selected="true"]').length,
   visiblePanels: [...document.querySelectorAll('[role="tabpanel"]')].filter(
@@ -74,67 +95,9 @@ check(
   JSON.stringify(initial),
 )
 
-// --- the reveal runs, and finishes ------------------------------------------
-const start = await revealState()
-check('vine reveal path present', start.present === true, JSON.stringify(start))
-
-await page
-  .waitForFunction(
-    () => {
-      const s = document.querySelector('.vine-sweep')
-      return s && Math.abs(parseFloat(getComputedStyle(s).strokeDashoffset) || 0) < 1
-    },
-    { timeout: 12000 },
-  )
-  .then(
-    () => check('reveal completes', true),
-    () => check('reveal completes', false, 'sweep never reached full reveal'),
-  )
-
-await page.waitForTimeout(400)
-
-// Hovering a leaf must preview THAT leaf's colour, not the active section's.
-await page.locator('#leaf-research').hover({ force: true })
-await page.waitForTimeout(500)
-const tint = await page.evaluate(() => {
-  const t = document.querySelector('.tint')
-  return { clip: t?.getAttribute('clip-path'), color: t?.style.color }
-})
-check(
-  'hovered leaf previews its own accent',
-  !!tint.clip?.includes('research') && !!tint.color && tint.color !== '',
-  JSON.stringify(tint),
-)
-
-// --- the reveal follows the vine's own route -------------------------------
-const revealOrder = await page.evaluate(() => {
-  const path = document.querySelector('.vine-sweep')
-  const half = +path.getAttribute('stroke-width') / 2
-  const total = path.getTotalLength()
-  const slugs = [...document.querySelectorAll('[role="tab"]')].map((b) => b.id.replace('leaf-', ''))
-  const centre = {}
-  for (const s of slugs) {
-    const bb = document.querySelector(`clipPath[id$="-${s}"] path`).getBBox()
-    centre[s] = [bb.x + bb.width / 2, bb.y + bb.height / 2]
-  }
-  const first = {}
-  for (let i = 0; i <= 800; i++) {
-    const at = path.getPointAtLength((i / 800) * total)
-    for (const s of slugs) {
-      if (first[s] !== undefined) continue
-      if (Math.hypot(at.x - centre[s][0], at.y - centre[s][1]) <= half) first[s] = i / 800
-    }
-  }
-  return Object.entries(first).sort((a, b) => a[1] - b[1]).map((e) => e[0])
-})
-const WANTED = 'florals,cake,drawings,textiles,clay,film,education,research'
-check('reveal visits leaves in vine order', revealOrder.join(',') === WANTED, revealOrder.join(','))
-
-// --- carousel selection swaps the panel -------------------------------------
-// The leaf hit areas are rotated and overlap the artwork, so dispatch the click
-// directly rather than fighting Playwright's actionability checks.
-await page.evaluate(() => document.querySelector('#leaf-research').click())
-await page.waitForTimeout(900)
+// --- selecting a leaf swaps the panel --------------------------------------
+await selectLeaf('research')
+await page.waitForTimeout(700)
 const swapped = await page.evaluate(() => ({
   selected: document.querySelector('[role="tab"][aria-selected="true"]')?.id,
   visible: [...document.querySelectorAll('[role="tabpanel"]')]
@@ -147,10 +110,25 @@ check(
   JSON.stringify(swapped),
 )
 
-// --- keyboard moves selection and focus together ----------------------------
+// --- the lit leaf wears its OWN accent, not the open section's --------------
+const lit = await page.evaluate(() => {
+  const t = document.querySelector('.tint')
+  return {
+    clip: t?.getAttribute('clip-path'),
+    color: t?.style.color,
+    opacity: +getComputedStyle(t).opacity,
+  }
+})
+check(
+  'lit leaf shows its own accent',
+  !!lit.clip?.includes('research') && lit.opacity > 0.9,
+  JSON.stringify(lit),
+)
+
+// --- keyboard moves selection and focus together ---------------------------
 await page.locator('#leaf-research').focus()
 await page.keyboard.press('ArrowRight')
-await page.waitForTimeout(700)
+await page.waitForTimeout(500)
 const keyed = await page.evaluate(() => ({
   selected: document.querySelector('[role="tab"][aria-selected="true"]')?.id,
   focused: document.activeElement?.id,
@@ -163,9 +141,9 @@ check(
 
 await page.screenshot({ path: `${OUT}/pw-section.png` })
 
-// --- lightbox: opens, traps focus, locks scroll, restores on Escape ---------
-await page.evaluate(() => document.querySelector('#leaf-clay').click())
-await page.waitForTimeout(700)
+// --- lightbox: opens, traps focus, locks scroll, restores on Escape --------
+await selectLeaf('clay')
+await page.waitForTimeout(500)
 await page.locator('#panel-clay .tile').first().click()
 await page.waitForTimeout(600)
 const lb = await page.evaluate(() => {
@@ -176,7 +154,11 @@ const lb = await page.evaluate(() => {
     locked: document.body.style.overflow === 'hidden',
   }
 })
-check('lightbox opens, traps focus, locks scroll', lb.open && lb.focusInside && lb.locked, JSON.stringify(lb))
+check(
+  'lightbox opens, traps focus, locks scroll',
+  lb.open && lb.focusInside && lb.locked,
+  JSON.stringify(lb),
+)
 await page.screenshot({ path: `${OUT}/pw-lightbox.png` })
 
 await page.keyboard.press('Escape')

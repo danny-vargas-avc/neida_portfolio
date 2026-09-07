@@ -62,6 +62,10 @@ node scripts/clean-vine.mjs      # drops scan noise, crops to the ink
 node scripts/leaf-overlay.mjs .  # renders the leaf hit areas over the art
 ```
 
+`clean-vine.mjs` keeps 49 of the scan's 176 paths — the rest is dust. Its
+thresholds can be swept via `MIN_THICKNESS` / `MIN_EXTENT` env vars; past about
+1.4 / 5 the count plateaus and it starts eating real linework instead.
+
 `clean-vine.mjs` writes `app/assets/art/vine.svg` (what the app imports) and
 prints the cropped viewBox to paste into `app/components/vine-leaves.ts`. It
 leaves path coordinates alone, so existing leaf positions stay valid.
@@ -72,21 +76,29 @@ they sit on the leaves.
 
 ### How the animations work
 
-The drawing is *filled* paths with `stroke="none"`, so the usual
-`stroke-dashoffset` "draw the line" trick has nothing to walk along. Two things
-work instead, both in `app/components/VineCarousel.vue`:
+**Animation policy: opacity and transform only.** Those two are handled by the
+compositor, so they stay smooth no matter how intricate the drawing is.
 
-- **The reveal** is an SVG `<mask>` holding one thick-stroked circle whose dash
-  offset animates. That sweeps a wedge around the wreath, so the vine appears to
-  grow around the ring and each leaf arrives as the sweep reaches it. A mask
-  doesn't care what's underneath, so this works on fills — and it animates one
-  element rather than sixty-four.
-- **Tinting one leaf** is a second copy of the artwork, clipped to that leaf's
-  ellipse and coloured with its accent, drawn on top.
+- **Entrance** — the vine fades and settles in over 2.6s. A plain CSS animation
+  (`vine-enter` in `app/assets/css/base.css`) on a single element.
+- **Lighting a leaf** — hovering, or selecting on touch, fades in a second copy
+  of the drawing clipped to that blade and tinted with the section's accent. The
+  clip never moves; only opacity does.
+- **Idle drift** — a slow rotation of an inner wrapper, so it never fights the
+  entrance over the same transform. Gated on `prefers-reduced-motion`.
 
-The leaf hit areas are real HTML `<button>`s layered over the SVG, so the
-navigation keeps genuine focus, keyboard and screen-reader behaviour. The idle
-rotation is applied to the wrapper so the buttons stay aligned with the art.
+This is deliberately much less clever than it once was. Earlier versions
+revealed the artwork by animating an SVG `<mask>` — a wide stroke walking a
+route through the leaves, with per-leaf hold-backs to control their order — and
+also tried growing each leaf out of its stem. Both stuttered badly and neither
+was salvageable: **changing anything inside a mask forces the browser to
+re-rasterise the mask and the artwork beneath it on every frame**, and this
+artwork is fifty filled paths. If you are tempted to animate a mask, clip, or
+filter over this drawing, that is the reason not to.
+
+The leaf clips are lens-shaped outlines built from each blade's stem-to-tip
+axis, not the hit-area ellipse: cake and florals sit inside the ring, where an
+ellipse also encloses lengths of vine and would colour them along with the leaf.
 
 ---
 
@@ -106,17 +118,18 @@ node scripts/verify-ui.mjs /tmp   # in another
 ```
 
 `verify-ui.mjs` drives a real browser and asserts what static output can't show:
-the reveal runs and finishes, nothing is selected on load, hovering a leaf
-previews its own colour, selecting swaps the panel, arrow keys move selection
-and focus, and the lightbox traps focus and restores it on Escape.
+the entrance runs and finishes, nothing is selected on load, a lit leaf shows its
+own colour, selecting swaps the panel, arrow keys move selection and focus, and
+the lightbox traps focus and restores it on Escape.
 
 Two things it has to get right, learned the hard way:
 
 - Headless Chrome throttles `requestAnimationFrame` to a few frames a second,
   which freezes every GSAP tween and makes working animations look broken. The
   launch flags in the script keep the ticker running.
-- `strokeDashoffset === 0` is also the value *before* any dash is applied, so it
-  cannot by itself tell "finished" from "never started".
+- The entrance is pure CSS, so it completes whether or not Vue has hydrated.
+  Waiting on it is not a readiness signal — clicks fired on the strength of it
+  silently did nothing. `selectLeaf()` retries until a click actually sticks.
 
 Also worth checking by hand: turn on **System Settings → Accessibility → Reduce
 Motion** and reload. The vine should appear without the sweep, hold still, and

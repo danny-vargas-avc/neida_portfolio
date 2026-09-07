@@ -59,7 +59,7 @@ export const WREATH = { cx: 295, cy: 505, r: 180 } as const
  * and did not need re-measuring. Re-run the script and paste the numbers here
  * whenever the artwork changes.
  */
-export const ART_VIEW = { x: 13, y: 221, width: 585, height: 547 } as const
+export const ART_VIEW = { x: 13, y: 221, width: 581, height: 547 } as const
 
 /**
  * The outline of a leaf blade, as an SVG path.

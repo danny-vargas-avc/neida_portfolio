@@ -28,9 +28,15 @@ import { dirname } from 'node:path'
 const SRC = 'public/media/carousel.svg'
 const OUT = 'app/assets/art/vine.svg'
 
-/** A path is dust if it is a hairline, or smaller than this in both axes. */
-const MIN_THICKNESS = 1.0
-const MIN_EXTENT = 3.0
+/**
+ * A path is dust if it is a hairline, or smaller than this in both axes.
+ * Overridable so the thresholds can be swept against the path count and the
+ * result eyeballed before committing to one. Past roughly 1.4 / 5 the count
+ * plateaus at 49 paths — beyond that the script starts eating real linework
+ * rather than dust.
+ */
+const MIN_THICKNESS = Number(process.env.MIN_THICKNESS ?? 1.4)
+const MIN_EXTENT = Number(process.env.MIN_EXTENT ?? 5)
 /** Breathing room left around the ink, in viewBox units. */
 const MARGIN = 8
 

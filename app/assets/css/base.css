@@ -76,15 +76,30 @@ button {
 }
 
 /**
- * Vine reveal, pre-animation state.
+ * Vine entrance.
  *
- * The mask circle ships with stroke-dashoffset="0" so that without JavaScript
- * the drawing is simply visible. When JS is available an inline head script
- * adds `.js` before first paint, and this rule hides the art ready for the
- * sweep — GSAP's inline style then overrides it as the reveal runs.
+ * Opacity and a hair of scale, nothing else — the compositor handles both, so
+ * this stays smooth regardless of how many paths the drawing has. (A previous
+ * version animated an SVG mask across the artwork and stuttered badly: mask
+ * changes force the mask and everything under it to re-rasterise every frame.)
+ *
+ * The `html.js` guard means the drawing is simply visible without JavaScript,
+ * rather than stuck at opacity 0. An inline head script adds the class before
+ * first paint, so there is no flash of the un-animated state.
  */
-html.js .vine-sweep {
-  stroke-dashoffset: var(--sweep-c, 0);
+@keyframes vine-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+html.js .vine {
+  animation: vine-enter 2.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Visually hidden, still read aloud. */
