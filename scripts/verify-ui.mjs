@@ -64,7 +64,9 @@ await page
       const v = document.querySelector('.vine')
       return v && +getComputedStyle(v).opacity > 0.99
     },
-    { timeout: 12000 },
+    // Generous: the entrance no longer starts until load + a frame, and in dev
+    // the main thread is busy hydrating for a while after that.
+    { timeout: 25000 },
   )
   .then(
     () => check('vine entrance completes', true),
@@ -73,11 +75,14 @@ await page
 
 const entrance = await page.evaluate(() => {
   const v = document.querySelector('.vine')
-  return { animations: v.getAnimations().map((a) => a.animationName) }
+  return {
+    animations: v.getAnimations().map((a) => a.animationName),
+    gated: document.documentElement.classList.contains('vine-ready'),
+  }
 })
 check(
-  'entrance is a CSS opacity/transform animation',
-  entrance.animations.includes('vine-enter'),
+  'entrance is a gated CSS opacity/transform animation',
+  entrance.animations.includes('vine-fade') && entrance.gated,
   JSON.stringify(entrance),
 )
 

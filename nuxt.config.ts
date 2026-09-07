@@ -27,10 +27,21 @@ export default defineNuxtConfig({
       link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
       script: [
         {
-          // Marks that JS is available before first paint, so the vine can be
-          // hidden ready for its reveal without flashing the finished drawing —
-          // and stays visible for anyone without JS. See base.css .vine-sweep.
-          innerHTML: "document.documentElement.classList.add('js')",
+          // Two flags, both before first paint:
+          //   js         — JS is available, so the vine may be hidden ready for
+          //                its entrance. Without it the drawing is simply shown.
+          //   vine-ready — the page has loaded and painted, which is when the
+          //                entrance may start. A CSS animation otherwise begins
+          //                the moment the element is styled and runs on
+          //                wall-clock time, so most of it elapsed during load:
+          //                the vine was already 40% faded in by DOMContentLoaded
+          //                and visually complete before anyone saw it.
+          // Deliberately not tied to hydration, which can be seconds away in
+          // dev while the server-rendered drawing is already on screen.
+          innerHTML:
+            "document.documentElement.classList.add('js');" +
+            "addEventListener('load',function(){requestAnimationFrame(function(){" +
+            "document.documentElement.classList.add('vine-ready')})})",
           tagPosition: 'head',
         },
       ],

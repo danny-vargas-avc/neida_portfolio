@@ -78,28 +78,42 @@ button {
 /**
  * Vine entrance.
  *
- * Opacity and a hair of scale, nothing else — the compositor handles both, so
- * this stays smooth regardless of how many paths the drawing has. (A previous
- * version animated an SVG mask across the artwork and stuttered badly: mask
- * changes force the mask and everything under it to re-rasterise every frame.)
+ * Opacity and transform only — the compositor handles both, so this stays smooth
+ * regardless of how many paths the drawing has. (A previous version animated an
+ * SVG mask across the artwork and stuttered badly: mask changes force the mask
+ * and everything under it to re-rasterise every frame.)
  *
- * The `html.js` guard means the drawing is simply visible without JavaScript,
- * rather than stuck at opacity 0. An inline head script adds the class before
- * first paint, so there is no flash of the un-animated state.
+ * Two guards, both set by the inline head script in nuxt.config.ts:
+ *
+ *   html.js          hides the vine ready to animate. Without JavaScript the
+ *                    rule never applies and the drawing is simply visible.
+ *   html.vine-ready  starts the animation, on load + a frame. Without this the
+ *                    animation begins as soon as the element is styled and burns
+ *                    through most of its duration during page load.
+ *
+ * Opacity and scale are separate animations so they can be timed differently.
+ * A single shared ease-out put 84% of the fade in the first third of the run,
+ * which read as an instant snap followed by nothing; opacity now ramps close to
+ * linear while the scale keeps its soft landing.
  */
-@keyframes vine-enter {
-  from {
-    opacity: 0;
-    transform: scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+@keyframes vine-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes vine-settle {
+  from { transform: scale(0.985); }
+  to { transform: none; }
 }
 
 html.js .vine {
-  animation: vine-enter var(--vine-enter) cubic-bezier(0.22, 1, 0.36, 1) both;
+  opacity: 0;
+}
+
+html.js.vine-ready .vine {
+  animation:
+    vine-fade var(--vine-enter) cubic-bezier(0.45, 0.05, 0.55, 0.95) both,
+    vine-settle var(--vine-enter) cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Visually hidden, still read aloud. */

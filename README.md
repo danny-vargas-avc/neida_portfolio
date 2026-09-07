@@ -79,10 +79,17 @@ they sit on the leaves.
 **Animation policy: opacity and transform only.** Those two are handled by the
 compositor, so they stay smooth no matter how intricate the drawing is.
 
-- **Entrance** — the vine fades and settles in. A plain CSS animation
-  (`vine-enter` in `app/assets/css/base.css`) on a single element. Change the
-  speed with the `--vine-enter` token in `tokens.css` (in seconds) — the idle
-  drift reads that value to know when to start, so there is only one number.
+- **Entrance** — the vine fades and settles in. Plain CSS animations
+  (`vine-fade` + `vine-settle` in `app/assets/css/base.css`) on a single element.
+  Change the speed with the `--vine-enter` token in `tokens.css`, in seconds.
+
+  It is gated on a `vine-ready` class that the inline head script adds on
+  `load` + a frame. Without that gate the animation starts as soon as the
+  element is styled and runs on wall-clock time regardless of whether the main
+  thread is free — the vine was already 40% faded in by `DOMContentLoaded` and
+  visually finished before anyone saw it, which is why a 4.5s fade looked
+  instant. Opacity and scale are also separate animations: sharing one ease-out
+  put 84% of the fade in the first third of the run.
 - **Lighting a leaf** — hovering, or selecting on touch, fades in a second copy
   of the drawing clipped to that blade and tinted with the section's accent. The
   clip never moves; only opacity does.

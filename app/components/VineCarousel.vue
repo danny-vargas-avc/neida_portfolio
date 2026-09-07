@@ -160,11 +160,34 @@ function hitStyle(leaf: Leaf) {
 }
 
 onMounted(() => {
-  // The entrance is a CSS animation on .vine. Hold the drift until it has
-  // finished, or the two transform the same element at once and the vine jumps.
-  // The duration is read from --vine-enter rather than repeated here, so
-  // changing the fade in CSS cannot leave this stale.
-  gsap.delayedCall(reduced.value ? 0 : enterSeconds() + 0.1, startIdle)
+  if (reduced.value) {
+    startIdle()
+    return
+  }
+
+  // Wait for the entrance to actually finish before drifting. Both transform the
+  // same subtree, and overlapping them makes the drawing jump.
+  //
+  // Keyed off animationend rather than a timer: the entrance no longer starts at
+  // page load (it waits for the `vine-ready` flag), so no fixed delay from mount
+  // would line up. The timer is only a backstop for the case where the event is
+  // missed — if the animation already finished before this component mounted,
+  // animationend has been and gone.
+  const stage = drift.value?.closest('.vine')
+  const onEnd = (e: AnimationEvent) => {
+    if (e.animationName !== 'vine-fade') return
+    stage?.removeEventListener('animationend', onEnd as EventListener)
+    startIdle()
+  }
+  stage?.addEventListener('animationend', onEnd as EventListener)
+
+  // Backstop: load + the animation, plus slack.
+  gsap.delayedCall(enterSeconds() + 4, () => {
+    if (!idle) {
+      stage?.removeEventListener('animationend', onEnd as EventListener)
+      startIdle()
+    }
+  })
 })
 
 // The OS setting can flip while the page is open; drop the loop if it does.
