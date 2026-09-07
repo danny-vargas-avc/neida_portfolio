@@ -90,11 +90,17 @@ compositor, so they stay smooth no matter how intricate the drawing is.
   visually finished before anyone saw it, which is why a 4.5s fade looked
   instant. Opacity and scale are also separate animations: sharing one ease-out
   put 84% of the fade in the first third of the run.
-- **Lighting a leaf** — hovering, or selecting on touch, fades in a second copy
-  of the drawing clipped to that blade and tinted with the section's accent. The
-  clip never moves; only opacity does.
-- **Idle drift** — a slow rotation of an inner wrapper, so it never fights the
-  entrance over the same transform. Gated on `prefers-reduced-motion`.
+- **Lighting a leaf** — hovering, or selecting on touch, fades colour in
+  *underneath* the drawing, so the pen lines stay black on top and it reads as
+  the leaf having been coloured in. Two passes of the blade outline, each nudged
+  and rotated off-register, so the colour sits slightly over the line in places
+  and short of it in others and the overlap varies the density — a single shape
+  filled exactly to the line just reads as a digital fill.
+- **Idle spin** — the vine turns slowly clockwise (one revolution per
+  `SPIN_SECONDS`). Hovering a leaf eases it to a stop; leaving resumes it. Done
+  by tweening the tween's `timeScale`, not by pausing it, which stops dead
+  mid-motion. It rotates an inner wrapper so it never fights the entrance over
+  the same transform. Gated on `prefers-reduced-motion`.
 
 This is deliberately much less clever than it once was. Earlier versions
 revealed the artwork by animating an SVG `<mask>` — a wide stroke walking a

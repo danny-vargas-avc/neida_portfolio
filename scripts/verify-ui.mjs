@@ -117,16 +117,16 @@ check(
 
 // --- the lit leaf wears its OWN accent, not the open section's --------------
 const lit = await page.evaluate(() => {
-  const t = document.querySelector('.tint')
+  const w = document.querySelector('.wash')
   return {
-    clip: t?.getAttribute('clip-path'),
-    color: t?.style.color,
-    opacity: +getComputedStyle(t).opacity,
+    passes: w?.children.length ?? 0,
+    color: w?.style.color,
+    opacity: w ? +getComputedStyle(w).opacity : 0,
   }
 })
 check(
-  'lit leaf shows its own accent',
-  !!lit.clip?.includes('research') && lit.opacity > 0.9,
+  'lit leaf is coloured in with its own accent',
+  lit.color === 'rgb(52, 112, 108)' && lit.opacity > 0.9 && lit.passes === 2,
   JSON.stringify(lit),
 )
 

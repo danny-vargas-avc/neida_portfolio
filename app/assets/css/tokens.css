@@ -87,7 +87,7 @@
    * How long the vine takes to fade in. Read by VineCarousel to time the idle
    * drift, so the two can't drift apart — keep it in SECONDS.
    */
-  --vine-enter: 4.5s;
+  --vine-enter: 3.5s;
 
   --measure: 64ch;
   --shell-max: 1320px;

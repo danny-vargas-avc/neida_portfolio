@@ -12,11 +12,14 @@
  * compositor instead, so they stay smooth however intricate the drawing is.
  *
  * So: the vine fades and settles in as one element, and lighting a leaf fades in
- * a tinted copy clipped to that blade. The clip is static — only opacity moves —
- * which is what keeps it cheap.
+ * colour UNDERNEATH the drawing, so the pen lines stay black on top of it and it
+ * reads as the leaf having been coloured in rather than as a UI state. Only
+ * opacity animates, which is what keeps it cheap.
  *
- * The idle drift rotates an inner wrapper rather than the faded element, so the
- * entrance and the drift never fight over the same transform.
+ * The idle spin rotates an inner wrapper rather than the faded element, so the
+ * entrance and the spin never fight over the same transform. Hovering a leaf
+ * eases the spin to a stop and releasing resumes it — done by tweening the
+ * tween's timeScale, not by pausing it, which would stop dead mid-motion.
  *
  * Hit areas are real HTML buttons layered over the SVG, so the navigation keeps
  * genuine focus, keyboard and screen-reader behaviour.
@@ -24,7 +27,7 @@
 import gsap from 'gsap'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue'
 import vineRaw from '~/assets/art/vine.svg?raw'
-import { ART_VIEW, LEAVES, leafOutline } from './vine-leaves'
+import { ART_VIEW, LEAVES, WREATH, leafOutline } from './vine-leaves'
 import type { Leaf } from './vine-leaves'
 import { useReducedMotion } from '~/composables/useReducedMotion'
 
@@ -45,7 +48,6 @@ const reduced = useReducedMotion()
 // Unique per instance so two vines on a page can't collide over element ids.
 const uid = useId()
 const artId = `vine-art-${uid}`
-const clipId = (slug: string) => `vine-clip-${uid}-${slug}`
 
 /**
  * Take the inner <g> (which carries potrace's translate/scale transform) and
@@ -73,45 +75,88 @@ const hovered = ref<string | null>(null)
 const target = computed(() => hovered.value ?? props.activeSlug)
 const litLeaf = computed(() => leaves.value.find((l) => l.slug === target.value) ?? null)
 
+/**
+ * The leaf the highlight is drawn around, held through the fade-out.
+ *
+ * Without this the clip is dropped the instant nothing is lit, while the
+ * highlight is still fading — so for the length of the transition the tint
+ * applied to the WHOLE drawing rather than one blade, flashing the entire vine
+ * in the accent colour.
+ */
+const lastLit = ref<Leaf | null>(null)
+watch(litLeaf, (leaf) => {
+  if (leaf) lastLit.value = leaf
+})
+const shownLeaf = computed(() => litLeaf.value ?? lastLit.value)
+
+/**
+ * Colour is laid on in two passes, each nudged off the outline.
+ *
+ * A single shape filled exactly to the line reads as a digital fill. Offsetting
+ * and rotating each pass a little leaves colour slightly over the line in places
+ * and short of it in others, and the overlap between the two makes the density
+ * uneven — which is what going over a patch twice with a pencil actually looks
+ * like.
+ */
+const WASH_PASSES = [
+  { rotate: -2.4, dx: 2, dy: -1.5, scale: 0.95, opacity: 0.3 },
+  { rotate: 3.1, dx: -1.5, dy: 2, scale: 0.91, opacity: 0.26 },
+]
+
+function washTransform(leaf: Leaf, pass: (typeof WASH_PASSES)[number]) {
+  return (
+    `translate(${leaf.cx + pass.dx} ${leaf.cy + pass.dy}) ` +
+    `rotate(${pass.rotate}) scale(${pass.scale}) ` +
+    `translate(${-leaf.cx} ${-leaf.cy})`
+  )
+}
+
+
 /** That leaf's own colour, so hovering previews where you're about to go. */
 const tintColor = computed(() =>
   litLeaf.value ? accentBySlug.value.get(litLeaf.value.slug) ?? 'currentColor' : 'currentColor',
 )
 
-let idle: gsap.core.Timeline | null = null
+let spin: gsap.core.Tween | null = null
+let spinRate: gsap.core.Tween | null = null
 
-/** Length of the CSS entrance, in seconds, from the --vine-enter token. */
-function enterSeconds() {
-  if (!import.meta.client) return 0
-  const raw = getComputedStyle(document.documentElement).getPropertyValue('--vine-enter')
-  const parsed = Number.parseFloat(raw)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 4.5
+/**
+ * The wreath's centre as a percentage of the cropped viewBox, so the drawing
+ * turns about the ring rather than the middle of its bounding box.
+ */
+const spinOrigin = `${(((WREATH.cx - ART_VIEW.x) / ART_VIEW.width) * 100).toFixed(1)}% ` +
+  `${(((WREATH.cy - ART_VIEW.y) / ART_VIEW.height) * 100).toFixed(1)}%`
+
+/** One turn, slowly. Linear, because a continuous rotation must not pulse. */
+const SPIN_SECONDS = 150
+
+function startSpin() {
+  if (reduced.value || !drift.value || spin) return
+  spin = gsap.to(drift.value, {
+    rotation: '+=360',
+    duration: SPIN_SECONDS,
+    ease: 'none',
+    repeat: -1,
+    transformOrigin: spinOrigin,
+  })
 }
 
 /**
- * Slow breathing rotation — enough to feel alive, small enough to keep the
- * leaves easy to hit.
+ * Eases the spin to a halt, or back up to speed.
  *
- * It eases from wherever the drawing already sits rather than jumping to one end
- * of the swing first: setting the start angle outright made the whole vine snap
- * counter-clockwise the moment it began.
+ * Tweening timeScale rather than calling pause()/resume(): pausing stops the
+ * rotation dead on the frame it happens, which reads as a jolt on something
+ * moving this slowly. Slowing to zero over half a second looks like it is
+ * settling. Resuming is given longer so it creeps back rather than lurching.
  */
-function startIdle() {
-  if (reduced.value || !drift.value) return
-  idle?.kill()
-  const el = drift.value
-
-  idle = gsap.timeline()
-  idle
-    .to(el, { rotation: 1.4, duration: 5, ease: 'sine.inOut', transformOrigin: '50% 55%' })
-    .to(el, {
-      rotation: -1.4,
-      duration: 10,
-      ease: 'sine.inOut',
-      transformOrigin: '50% 55%',
-      yoyo: true,
-      repeat: -1,
-    })
+function setSpinning(on: boolean) {
+  if (!spin) return
+  spinRate?.kill()
+  spinRate = gsap.to(spin, {
+    timeScale: on ? 1 : 0,
+    duration: on ? 1.1 : 0.55,
+    ease: on ? 'power2.inOut' : 'power2.out',
+  })
 }
 
 function select(slug: string) {
@@ -159,50 +204,32 @@ function hitStyle(leaf: Leaf) {
   }
 }
 
+// Hovering a leaf stops the vine so it can be read and aimed at; leaving starts
+// it again. Keyed on hover alone, not on the open section — otherwise choosing a
+// section would freeze the drawing for as long as it stayed open.
+watch(hovered, (slug) => setSpinning(!slug))
+
 onMounted(() => {
-  if (reduced.value) {
-    startIdle()
-    return
-  }
-
-  // Wait for the entrance to actually finish before drifting. Both transform the
-  // same subtree, and overlapping them makes the drawing jump.
-  //
-  // Keyed off animationend rather than a timer: the entrance no longer starts at
-  // page load (it waits for the `vine-ready` flag), so no fixed delay from mount
-  // would line up. The timer is only a backstop for the case where the event is
-  // missed — if the animation already finished before this component mounted,
-  // animationend has been and gone.
-  const stage = drift.value?.closest('.vine')
-  const onEnd = (e: AnimationEvent) => {
-    if (e.animationName !== 'vine-fade') return
-    stage?.removeEventListener('animationend', onEnd as EventListener)
-    startIdle()
-  }
-  stage?.addEventListener('animationend', onEnd as EventListener)
-
-  // Backstop: load + the animation, plus slack.
-  gsap.delayedCall(enterSeconds() + 4, () => {
-    if (!idle) {
-      stage?.removeEventListener('animationend', onEnd as EventListener)
-      startIdle()
-    }
-  })
+  // No need to wait for the entrance: it animates .vine while the spin animates
+  // .vine-inner, so the two never touch the same transform.
+  startSpin()
 })
 
 // The OS setting can flip while the page is open; drop the loop if it does.
 watch(reduced, (isReduced) => {
   if (isReduced) {
-    idle?.kill()
+    spinRate?.kill()
+    spin?.kill()
+    spin = null
     if (drift.value) gsap.set(drift.value, { rotation: 0 })
   } else {
-    startIdle()
+    startSpin()
   }
 })
 
 onBeforeUnmount(() => {
-  idle?.kill()
-  gsap.killTweensOf(startIdle)
+  spinRate?.kill()
+  spin?.kill()
 })
 </script>
 
@@ -218,36 +245,32 @@ onBeforeUnmount(() => {
         >
           <defs>
             <g :id="artId" v-html="artInner" />
-
-            <!--
-              Clipped to the blade itself, not the hit-area ellipse. Cake and
-              florals sit inside the wreath, where an ellipse would also enclose
-              lengths of vine and colour them along with the leaf.
-            -->
-            <clipPath v-for="leaf in leaves" :id="clipId(leaf.slug)" :key="leaf.slug">
-              <path :d="leafOutline(leaf)" />
-            </clipPath>
           </defs>
+
+          <!--
+            Colour goes UNDER the drawing so the pen lines stay black on top of
+            it, the way a coloured-in drawing actually looks. Tinting the ink
+            itself read as a UI state; this reads as the leaf having been
+            coloured in.
+          -->
+          <g
+            v-if="shownLeaf"
+            class="wash"
+            :class="{ 'is-lit': !!litLeaf }"
+            :style="{ color: tintColor }"
+          >
+            <path
+              v-for="(pass, i) in WASH_PASSES"
+              :key="i"
+              :d="leafOutline(shownLeaf)"
+              :transform="washTransform(shownLeaf, pass)"
+              :opacity="pass.opacity"
+              fill="currentColor"
+            />
+          </g>
 
           <use :href="`#${artId}`" />
 
-          <!--
-            The lit leaf: a second copy of the drawing clipped to that blade and
-            tinted, faded in by CSS. Painted last so it sits over the vine — cake
-            and florals overlap the ring itself, and SVG has no z-index, so
-            document order is the stacking order.
-
-            The clip never animates; only opacity does. That is what keeps this
-            cheap however intricate the drawing is.
-          -->
-          <g
-            class="tint"
-            :class="{ 'is-lit': !!litLeaf }"
-            :clip-path="litLeaf ? `url(#${clipId(litLeaf.slug)})` : undefined"
-            :style="{ color: tintColor }"
-          >
-            <use :href="`#${artId}`" />
-          </g>
         </svg>
 
         <div class="hits" role="tablist" aria-label="Areas of work" @keydown="onKeydown">
@@ -297,8 +320,8 @@ onBeforeUnmount(() => {
 .vine-inner {
   position: absolute;
   inset: 0;
-  /* Promotes the drawing to its own layer, so the idle drift is composited
-     rather than repainting fifty paths every frame. */
+  /* Promotes the drawing to its own layer, so the spin is composited rather
+     than repainting fifty paths every frame. */
   will-change: transform;
 }
 
@@ -309,13 +332,19 @@ onBeforeUnmount(() => {
   overflow: visible;
 }
 
-.tint {
+.wash {
   opacity: 0;
-  /* Colour is set inline from the leaf's own accent. */
+  /* Colour is set inline from the leaf's own accent.
+
+     If a glow is ever wanted here, drop-shadow(0 0 Npx currentColor) follows the
+     linework nicely — but it has to go on an UNCLIPPED parent with the clip on
+     an inner group. CSS applies filter before clip-path, so both on one element
+     cuts the halo off square at the blade's outline. */
   transition: opacity var(--dur-med) var(--ease-enter);
+  pointer-events: none;
 }
 
-.tint.is-lit {
+.wash.is-lit {
   opacity: 1;
 }
 
