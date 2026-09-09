@@ -84,6 +84,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
           <button
             type="button"
             class="mg-round-btn"
+            data-theme-toggle
             :aria-label="themeLabel"
             :title="themeLabel"
             @click="toggle"

@@ -69,6 +69,28 @@ if DEBUG:
 # nginx forwards the scheme the visitor actually used.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+# Shared between processes, which for the sign-in throttle is the whole point:
+# the default cache lives inside one process, and with three gunicorn workers a
+# counter kept there is three separate counters — so a limit of eight attempts
+# quietly becomes twenty-four, and which one a request lands on is luck.
+# Files rather than a table so there is no cache table to create on deploy, and
+# rather than Redis so there is no fourth container to run for one counter.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        # Beside the database, so it sits on the volume that already persists
+        # and is not lost on redeploy.
+        "LOCATION": env("DJANGO_CACHE_DIR") or str(BASE_DIR / ".cache"),
+    }
+}
+
+# She is signing in to a phone app she opens for two minutes at a time. The
+# fortnight default means being asked for a password most visits, which trains
+# exactly the habit that makes a weak one attractive.
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 120
+SESSION_SAVE_EVERY_REQUEST = True  # active use keeps it alive
+SESSION_COOKIE_SAMESITE = "Lax"
+
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

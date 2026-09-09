@@ -611,13 +611,32 @@ html.mg-dark .mg-photo-index { background: rgb(0 0 0 / 0.6); }
 
 .mg-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
+/*
+  The tile being carried. No transition on transform while dragging — it is
+  driven from pointermove and any easing turns following the finger into
+  lagging behind it.
+*/
 .mg-photo.is-dragging {
-  opacity: 0.4;
-  transform: scale(1.08);
-  z-index: 2;
+  z-index: 3;
+  opacity: 0.92;
+  transition: none;
+  box-shadow: var(--mg-lift-high);
+  cursor: grabbing;
 }
 
-.mg-photo.is-over { outline: 2.5px solid var(--mg-accent); outline-offset: -2px; }
+/* Belt and braces with the touchmove handler: this stops a gesture that begins
+   on a tile from scrolling once a drag is live. */
+.mg-photos.is-sorting { touch-action: none; }
+.mg-photos.is-sorting .mg-photo { touch-action: none; }
+
+/* Where it would land. Filled as well as outlined, because a hairline under a
+   finger is not visible on a phone. */
+.mg-photo.is-over {
+  outline: 2.5px solid var(--mg-accent);
+  outline-offset: -2px;
+}
+
+.mg-photo.is-over img { opacity: 0.45; }
 
 .mg-photo-index {
   position: absolute;

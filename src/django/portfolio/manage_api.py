@@ -18,11 +18,13 @@ would have exactly one row.
 from __future__ import annotations
 
 import json
+import logging
 from functools import wraps
 
 from django.contrib.auth import authenticate
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -30,6 +32,8 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 
 from .api import piece_json
 from .models import Piece, Section, SiteInfo, SocialLink
+
+logger = logging.getLogger(__name__)
 
 
 def _json_body(request) -> dict:
@@ -95,18 +99,71 @@ def session(request):
     return JsonResponse({"signedIn": False})
 
 
+
+# The sign-in form is reachable from the open internet — unlike the Django admin
+# behind it, which Cloudflare Access gates. Access is deliberately not used here
+# because it authenticates by redirecting to a cloudflareaccess.com page, which
+# is outside the installed app's scope and drops her out to the browser. So the
+# brute-force protection Access would have provided has to live here instead.
+ATTEMPT_LIMIT = 8
+ATTEMPT_WINDOW = 15 * 60  # seconds to remember failures for
+LOCKOUT = 15 * 60  # seconds locked out once the limit is passed
+
+
+def client_ip(request) -> str:
+    """
+    The visitor's address, not nginx's.
+
+    Behind the tunnel every request reaches Django from a container address, so
+    REMOTE_ADDR is the same for everyone and would throttle the whole internet
+    as one. CF-Connecting-IP is set by Cloudflare itself and cannot be spoofed
+    by a client, so it is preferred; the others are fallbacks for running
+    without the tunnel.
+    """
+    header = request.META.get("HTTP_CF_CONNECTING_IP")
+    if header:
+        return header
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded:
+        # Leftmost is the original client. Trustworthy only because nginx sits
+        # in front and rewrites it; it is advisory, which is why CF's header
+        # comes first.
+        return forwarded.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "")
+
+
 @require_POST
 def sign_in(request):
+    ip = client_ip(request)
+    key = f"signin-fails:{ip}"
+    fails = cache.get(key, 0)
+
+    if fails >= ATTEMPT_LIMIT:
+        # Deliberately says so rather than pretending the password was wrong:
+        # she will hit this by fumbling a password, and "try again in a few
+        # minutes" is the only message that lets her do the right thing.
+        return JsonResponse(
+            {"detail": "Too many attempts. Wait a few minutes and try again."},
+            status=429,
+        )
+
     data = _json_body(request)
     user = authenticate(
         request,
         username=(data.get("username") or "").strip(),
         password=data.get("password") or "",
     )
+
     if user is None or not user.is_staff:
+        # Counted per address, not per username: counting by username would let
+        # anyone lock Neida out of her own site by guessing at it repeatedly.
+        cache.set(key, fails + 1, LOCKOUT if fails + 1 >= ATTEMPT_LIMIT else ATTEMPT_WINDOW)
+        logger.warning("Failed portal sign-in from %s (%s so far)", ip or "unknown", fails + 1)
         # One message for both cases on purpose: saying which half was wrong
         # tells an attacker whether a username exists.
         return JsonResponse({"detail": "That username and password do not match."}, status=400)
+
+    cache.delete(key)
     auth_login(request, user)
     return JsonResponse({"signedIn": True, "name": user.get_short_name() or user.username})
 

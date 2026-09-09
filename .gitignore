@@ -25,3 +25,6 @@ etc/docker/.env.production
 .vscode/
 .idea/
 *.swp
+
+# Throttle counters, written at runtime
+src/django/.cache/

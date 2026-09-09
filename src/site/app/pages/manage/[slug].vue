@@ -7,10 +7,11 @@
  * lands. On a phone connection a 3MB photograph takes a few seconds to travel
  * and resize, and staring at an unchanged grid for that long reads as a failure.
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { manageApi, type ManagePiece } from '~/composables/useManageApi'
 import { useFieldSaver, useManage } from '~/composables/useManage'
+import { useSortablePhotos } from '~/composables/useSortablePhotos'
 
 definePageMeta({ layout: false })
 
@@ -110,9 +111,27 @@ function open(piece: ManagePiece) {
 
 function close() {
   editing.value = null
+  confirmingDelete.value = false
 }
 
+/*
+  Escape closes the sheet, and the browser's back gesture is left alone.
+
+  Worth having even on a phone: the portal is a normal web page on a laptop too,
+  and a modal with no keyboard way out is a trap for anyone not using a mouse.
+*/
+function onKey(event: KeyboardEvent) {
+  if (event.key === 'Escape' && editing.value) {
+    event.stopPropagation()
+    close()
+  }
+}
+
+onMounted(() => document.addEventListener('keydown', onKey))
+onUnmounted(() => document.removeEventListener('keydown', onKey))
+
 const savingPiece = ref(false)
+const confirmingDelete = ref(false)
 
 async function savePiece() {
   const piece = editing.value
@@ -130,8 +149,6 @@ async function savePiece() {
   }
 }
 
-const confirmingDelete = ref(false)
-
 async function removePiece() {
   const piece = editing.value
   const s = current.value
@@ -148,46 +165,14 @@ async function removePiece() {
 }
 
 // --- reordering ------------------------------------------------------------
-//
-// Long-press then drag. Pointer events rather than HTML5 drag-and-drop, which
-// does not fire on touch at all — the one place it is needed most.
 
-const dragFrom = ref<number | null>(null)
-const dragOver = ref<number | null>(null)
-let holdTimer: ReturnType<typeof setTimeout> | undefined
-
-function holdStart(index: number) {
-  holdTimer = setTimeout(() => {
-    dragFrom.value = index
-    // A short tick confirms the grab on a device with no cursor to show it.
-    navigator.vibrate?.(12)
-  }, 320)
-}
-
-function holdEnd() {
-  clearTimeout(holdTimer)
-}
-
-function pointerMove(event: PointerEvent) {
-  if (dragFrom.value === null) return
-  event.preventDefault()
-  const el = document.elementFromPoint(event.clientX, event.clientY)
-  const tile = el?.closest('[data-index]') as HTMLElement | null
-  dragOver.value = tile ? Number(tile.dataset.index) : null
-}
-
-async function pointerUp() {
-  holdEnd()
-  const from = dragFrom.value
-  const to = dragOver.value
-  dragFrom.value = null
-  dragOver.value = null
+/** Applies a move and saves it, rolling back if the server disagrees. */
+async function movePiece(fromIndex: number, toIndex: number) {
   const s = current.value
-  if (from === null || to === null || from === to || !s) return
-
-  const next = [...s.pieces]
-  next.splice(to, 0, ...next.splice(from, 1))
+  if (!s) return
   const before = s.pieces
+  const next = [...s.pieces]
+  next.splice(toIndex, 0, ...next.splice(fromIndex, 1))
   s.pieces = next
   try {
     await manageApi.reorder(slug.value, next.map((p) => p.id))
@@ -196,6 +181,14 @@ async function pointerUp() {
     s.pieces = before
     say((err as Error).message, true)
   }
+}
+
+const sort = useSortablePhotos(movePiece)
+
+/** A drag that just ended must not also open the photo. */
+function tapPhoto(piece: ManagePiece) {
+  if (sort.swallowedClick()) return
+  open(piece)
 }
 
 // Short labels: the segmented control has a third of the width each, and
@@ -278,19 +271,25 @@ useHead(() => ({ title: `${current.value?.title ?? 'Section'} — Manage` }))
       <div
         v-if="current.pieces.length || pending.length"
         class="mg-photos"
-        @pointermove="pointerMove"
-        @pointerup="pointerUp"
-        @pointercancel="pointerUp"
+        :class="{ 'is-sorting': sort.from.value !== null }"
+        @pointermove="sort.onPointerMove"
+        @pointerup="sort.onPointerUp"
+        @pointercancel="sort.onPointerUp"
       >
         <button
           v-for="(piece, i) in current.pieces"
           :key="piece.id"
           :data-index="i"
           class="mg-photo"
-          :class="{ 'is-dragging': dragFrom === i, 'is-over': dragOver === i && dragFrom !== null && dragFrom !== i }"
-          @pointerdown="holdStart(i)"
-          @pointerleave="holdEnd"
-          @click="dragFrom === null && open(piece)"
+          :class="{
+            'is-dragging': sort.from.value === i,
+            'is-over': sort.over.value === i && sort.from.value !== null && sort.from.value !== i,
+          }"
+          :style="sort.from.value === i
+            ? { transform: `translate(${sort.shift.x}px, ${sort.shift.y}px) scale(1.06)` }
+            : undefined"
+          @pointerdown="sort.onPointerDown($event, i)"
+          @click="tapPhoto(piece)"
         >
           <img :src="piece.thumbnail || piece.image" :alt="piece.alt || piece.title" draggable="false">
           <span v-if="current.pieces.length > 1" class="mg-photo-index">{{ i + 1 }}</span>

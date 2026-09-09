@@ -98,7 +98,16 @@ useHead({ title: 'Manage — Neida Rodriguez' })
 
   <ManageChrome v-else :title="site?.name || 'Your site'">
     <template #action>
-      <a href="/" class="mg-round-btn" aria-label="View the site" title="View the site">
+      <!-- New tab: the installed app is scoped to /manage, so following this in
+           place drops her into the browser with no way back. -->
+      <a
+        href="/"
+        target="_blank"
+        rel="noopener"
+        class="mg-round-btn"
+        aria-label="View the site in a new tab"
+        title="View the site"
+      >
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M14 4h6v6M20 4l-8.5 8.5" />
           <path d="M18 14.5V19a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 014 19V8a1.5 1.5 0 011.5-1.5H10" />

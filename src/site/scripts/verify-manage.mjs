@@ -1,8 +1,24 @@
+/**
+ * Browser checks for the portal at /manage.
+ *
+ * Needs an account to sign in with, passed in rather than written down:
+ *
+ *   MANAGE_USER=neida MANAGE_PASS='…' node scripts/verify-manage.mjs
+ *
+ * Run against the dev server by default; set VERIFY_URL for anywhere else.
+ * Every check cleans up after itself, but it does write to whatever database it
+ * is pointed at — so point it at a development one.
+ */
 import { chromium } from 'playwright-core'
-import { readFileSync } from 'node:fs'
-const PW = readFileSync(process.env.PWFILE, 'utf8').trim()
+
+const USER = process.env.MANAGE_USER
+const PW = process.env.MANAGE_PASS
+if (!USER || !PW) {
+  console.error('Set MANAGE_USER and MANAGE_PASS to an account that can sign in.')
+  process.exit(1)
+}
+const BASE = process.env.VERIFY_URL?.replace(/\/$/, '') || 'http://localhost:3000'
 const OUT = process.argv[2] || '.'
-const B = 'http://localhost:3000'
 
 const browser = await chromium.launch({
   executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -18,14 +34,14 @@ page.on('console', (m) => m.type() === 'error' && errs.push(m.text()))
 
 const step = (n, ok, extra = '') => console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${n}${extra ? ' — ' + extra : ''}`)
 
-await page.goto(`${B}/manage`, { waitUntil: 'networkidle' })
+await page.goto(`${BASE}/manage`, { waitUntil: 'networkidle' })
 // The app renders nothing until it knows whether there is a session, so wait
 // for the form rather than guessing how long that takes.
 await page.waitForSelector('#u', { timeout: 15000 })
 step('sign-in screen appears', (await page.locator('#u').count()) === 1)
 
 // wrong password
-await page.fill('#u', '__apitest__'); await page.fill('#p', 'wrong')
+await page.fill('#u', USER); await page.fill('#p', 'wrong')
 await page.click('button.mg-btn-primary')
 await page.waitForTimeout(900)
 const err = await page.locator('.mg-error').textContent().catch(() => '')
@@ -97,7 +113,7 @@ const final = await photos()
 step('removes a photo', final === before, `${after} -> ${final}`)
 
 // details screen
-await page.goto(`${B}/manage/details`, { waitUntil: 'networkidle' })
+await page.goto(`${BASE}/manage/details`, { waitUntil: 'networkidle' })
 await page.waitForTimeout(1200)
 step('details screen loads', (await page.locator('#d-name').count()) === 1)
 await page.screenshot({ path: `${OUT}/mg-details.png` })
