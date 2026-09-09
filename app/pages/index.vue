@@ -13,17 +13,30 @@ import type { ComponentPublicInstance } from 'vue'
 import type { Section, SiteInfo } from '~/types/content'
 import { useReducedMotion } from '~/composables/useReducedMotion'
 
-const { data: sectionData } = await useAsyncData('sections', () =>
-  queryCollection('sections').order('order', 'ASC').all(),
-)
-const { data: site } = await useAsyncData('site', () =>
-  queryCollection('site').first(),
+/**
+ * Everything on the page, in one request from the Django admin.
+ *
+ * One endpoint rather than a call per model: this is a single page that needs
+ * all of it at once, so one round trip is both simpler and easier to cache.
+ * Unpublished sections are already filtered out server-side.
+ */
+const { apiBase } = useRuntimeConfig().public
+const { data, error } = await useAsyncData('content', () =>
+  $fetch<{ site: SiteInfo; sections: Section[] }>(`${apiBase}/api/content/`),
 )
 
-const sections = computed(
-  () => ((sectionData.value ?? []) as unknown as Section[]).filter((s) => !s.draft),
-)
-const info = computed(() => (site.value ?? {}) as unknown as SiteInfo)
+if (error.value) {
+  // Better a clear failure than a page that renders as an empty drawing and
+  // looks like the content was deleted.
+  throw createError({
+    statusCode: 503,
+    statusMessage: 'The content service is unavailable. Is the Django server running?',
+    fatal: true,
+  })
+}
+
+const sections = computed(() => data.value?.sections ?? [])
+const info = computed(() => data.value?.site ?? ({} as SiteInfo))
 
 // Selection is keyed by slug rather than index: the vine's leaves are laid out
 // by hand in vine-leaves.ts, so slug is the only stable link between the
@@ -35,17 +48,6 @@ const current = computed(
   () => sections.value.find((s) => s.slug === activeSlug.value) ?? null,
 )
 // The vine only needs each leaf's identity and colour.
-/**
- * Whether a section has an intro paragraph.
- *
- * The bodies ship empty, so without this the note's wrapper still renders and
- * leaves its bottom margin as a gap between the heading and the work.
- */
-function hasNote(section: Section) {
-  const body = section.body as { value?: unknown[] } | undefined
-  return Array.isArray(body?.value) && body.value.length > 0
-}
-
 const leafSections = computed(() =>
   sections.value.map((s) => ({ slug: s.slug, accent: s.accent })),
 )
@@ -143,9 +145,9 @@ useHead(() => ({
             <p class="tagline">{{ section.tagline }}</p>
           </header>
 
-          <div v-if="hasNote(section)" class="panel-note prose">
-            <ContentRenderer :value="section" />
-          </div>
+          <!-- Omitted entirely when blank, so an unwritten section still looks
+               deliberate rather than leaving a gap under the heading. -->
+          <p v-if="section.intro" class="panel-note prose">{{ section.intro }}</p>
 
           <PublicationList
             v-if="section.kind === 'research' && section.publications?.length"

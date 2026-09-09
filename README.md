@@ -3,12 +3,16 @@
 A single-page portfolio built around Neida's hand-drawn vine. Each leaf on the
 drawing is a section of her work; choosing one opens that section below.
 
-Nuxt 4 · Vue 3 · TypeScript · Nuxt Content · GSAP. Prerendered to static HTML.
+Nuxt 4 · Vue 3 · TypeScript · GSAP, reading from a Django + Unfold admin.
+
+Server-rendered rather than prerendered: the content comes from the admin, and
+prerendering would freeze it at build time — Neida would save a change and see
+nothing until someone redeployed.
 
 ```bash
 npm install
 npm run dev        # http://localhost:3000
-npm run build      # static output in .output/public
+npm run build      # server build in .output/
 ```
 
 > **Note:** `npm install` needs `--legacy-peer-deps` on npm 11.5.x, which has a
@@ -19,40 +23,14 @@ npm run build      # static output in .output/public
 
 ## For Neida: editing the site
 
-Everything you'd want to change lives in two places. You never need to touch
-code.
+Everything lives in an admin at `/admin/` — no files, no code. See
+[server/README.md](server/README.md) for running it and for creating her
+account.
 
-### `content/site.yml`
+The site reads from it live: save, refresh, it's there.
 
-Your name, the line under it, the about text, and your contact links.
-
-### `content/sections/*.md`
-
-One file per leaf on the vine. The part between the `---` lines is the
-settings; anything below is a paragraph shown under the heading.
-
-To **add a piece of work**:
-
-1. Put the image in `public/media/<section>/` — e.g. `public/media/cake/lemon-tart.jpg`
-2. Add three lines to that section's `pieces:` list:
-
-```yaml
-  - image: /media/cake/lemon-tart.jpg
-    title: Lemon tart
-    year: 2026
-```
-
-`orientation: portrait | landscape | square` sets the shape of its grid cell.
-`note:` adds a caption in the enlarged view. `alt:` describes the image for
-people using a screen reader — worth filling in.
-
-The intro paragraphs and the About text ship empty, and the page simply omits
-whatever is left blank — so nothing reads as unfinished while you fill it in.
-Each file says in a comment what belongs where.
-
-Still placeholder, and obvious when you look: every `title: Placeholder` in the
-`pieces:` lists, the example publications and workshops, and the generated
-gallery images.
+**Both servers must be running:** `npm run dev` here, and the Django one in
+`server/`.
 
 ---
 
@@ -123,9 +101,13 @@ ellipse also encloses lengths of vine and would colour them along with the leaf.
 
 ## Placeholders
 
-`scripts/generate-placeholders.mjs` writes the abstract prints currently filling
-the galleries. **Delete the script and `public/media/<section>/placeholder-*.svg`
-once real photographs land** — nothing in the app imports them.
+The galleries are empty until Neida uploads photographs through the admin. That
+is the intended starting state: blank sections are omitted rather than rendered
+empty, so the site looks deliberate while she fills it in.
+
+`scripts/generate-placeholders.mjs` and `public/media/<section>/placeholder-*.svg`
+are left over from before the admin existed and can be deleted — nothing reads
+them any more.
 
 ---
 

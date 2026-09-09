@@ -26,20 +26,18 @@ export interface Offering {
 
 /** One discipline: a leaf on the vine plus the panel it reveals. */
 export interface Section {
-  path: string
   title: string
   slug: string
   tagline: string
   kind: SectionKind
   accent: string
   order: number
-  draft?: boolean
   pieces?: Piece[]
   publications?: Publication[]
   offerings?: Offering[]
   cv?: string
-  /** Parsed Markdown body, rendered by <ContentRenderer>. */
-  body?: unknown
+  /** Opening paragraph. Null or empty when unwritten. */
+  intro?: string | null
 }
 
 export interface SiteInfo {

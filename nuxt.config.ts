@@ -3,7 +3,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-09-06',
   devtools: { enabled: true },
 
-  modules: ['@nuxt/content', '@nuxt/image', '@nuxt/fonts'],
+  modules: ['@nuxt/image', '@nuxt/fonts'],
 
   css: ['~/assets/css/tokens.css', '~/assets/css/base.css'],
 
@@ -48,12 +48,11 @@ export default defineNuxtConfig({
     },
   },
 
-  content: {
-    build: {
-      markdown: {
-        // Her writing room is long-form; anchor links let her share a section.
-        toc: { depth: 3 },
-      },
+  runtimeConfig: {
+    public: {
+      // Where the Django admin's read-only feed lives. Override in production
+      // with NUXT_PUBLIC_API_BASE.
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000',
     },
   },
 
@@ -64,11 +63,11 @@ export default defineNuxtConfig({
     format: ['avif', 'webp', 'jpeg'],
   },
 
+  // Rendered per request rather than prerendered: the content now comes from
+  // the Django admin, and prerendering would freeze it at build time — Neida
+  // would save a change and see nothing until someone redeployed.
   nitro: {
-    prerender: {
-      crawlLinks: true,
-      routes: ['/'],
-    },
+    prerender: { crawlLinks: false, routes: [] },
   },
 
   typescript: {
