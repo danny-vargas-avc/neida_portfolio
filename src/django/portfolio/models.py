@@ -13,7 +13,7 @@ text or an upload. The fields that must line up with the drawing or the code
 (slug, accent, kind) are kept together and out of the way in the admin.
 """
 
-from django.core.validators import RegexValidator
+from django.core.validators import FileExtensionValidator, RegexValidator
 from django.db import models
 
 
@@ -153,11 +153,17 @@ class Section(models.Model):
         default=0,
         help_text="Lower numbers come first when moving between leaves with the arrow keys.",
     )
+    # PDF only, and not merely for tidiness: uploads are served from the site's
+    # own domain, so a file the browser decides to treat as a web page could run
+    # scripts as if the site had written them. An ImageField gets this for free
+    # (Pillow rejects anything that is not really an image); a FileField accepts
+    # whatever it is handed, so the restriction has to be explicit.
     cv = models.FileField(
         upload_to="cv/",
         blank=True,
+        validators=[FileExtensionValidator(["pdf"])],
         verbose_name="CV",
-        help_text="Research sections only. Adds a download button.",
+        help_text="Research sections only. A PDF. Adds a download button.",
     )
     is_published = models.BooleanField(
         default=True,
