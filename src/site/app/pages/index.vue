@@ -126,9 +126,16 @@ useHead(() => ({
         @update:active-slug="activeSlug = $event"
       />
 
-      <Transition name="hint">
-        <p v-if="!current" class="hint">Choose a leaf</p>
-      </Transition>
+      <!--
+        Always rendered, never mounted and unmounted. Under a v-if the element
+        stayed in the flow while it faded and was removed only once the
+        transition ended, so its line and margin collapsed in a single frame a
+        few hundred milliseconds after the click — a visible jump, right as the
+        scroll was settling. Keeping the box and switching visibility means the
+        layout never changes; visibility also takes it out of the accessibility
+        tree, which opacity alone would not.
+      -->
+      <p class="hint" :class="{ 'is-gone': !!current }">Choose a leaf</p>
 
       <div class="panels shell">
         <section
@@ -241,16 +248,20 @@ useHead(() => ({
   letter-spacing: 0.12em;
   text-align: center;
   text-transform: lowercase;
-}
-
-.hint-enter-active,
-.hint-leave-active {
   transition: opacity var(--dur-med) var(--ease-enter);
 }
 
-.hint-enter-from,
-.hint-leave-to {
+/*
+  Hidden without leaving the flow, so choosing a leaf costs no layout change.
+  visibility is held until the fade finishes, then flips in one step; going the
+  other way it flips back immediately and only the opacity animates.
+*/
+.hint.is-gone {
   opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--dur-med) var(--ease-enter),
+    visibility 0s linear var(--dur-med);
 }
 
 .panel-head {

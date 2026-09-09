@@ -145,6 +145,36 @@ check(
   JSON.stringify(keyed),
 )
 
+// --- choosing a leaf must not move the page ---------------------------------
+// The "choose a leaf" hint used to sit under a v-if inside a <Transition> that
+// animated opacity only. It stayed in the flow while it faded and was removed
+// when the transition ended, so its line and margin collapsed in one frame a
+// few hundred milliseconds after the click — long enough after the scroll to
+// read as a glitch rather than as part of the interaction. Position is measured
+// in the document, not the viewport: the scroll is meant to move.
+await page.reload({ waitUntil: 'networkidle' })
+await selectLeaf('florals')
+await page.waitForTimeout(100)
+const shift = await page.evaluate(async () => {
+  const panels = document.querySelector('.panels')
+  const at = () => Math.round(panels.getBoundingClientRect().top + window.scrollY)
+  const start = at()
+  let worst = 0
+  const until = performance.now() + 2000
+  while (performance.now() < until) {
+    await new Promise((r) => setTimeout(r, 40))
+    worst = Math.max(worst, Math.abs(at() - start))
+  }
+  return { start, worst }
+})
+check(
+  'choosing a leaf shifts nothing',
+  shift.worst === 0,
+  shift.worst === 0 ? '' : `panels moved ${shift.worst}px after the click`,
+)
+
+await selectLeaf('research')
+await page.waitForTimeout(400)
 await page.screenshot({ path: `${OUT}/pw-section.png` })
 
 // --- lightbox: opens, traps focus, locks scroll, restores on Escape --------
