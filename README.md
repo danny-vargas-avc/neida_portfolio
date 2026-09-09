@@ -5,15 +5,34 @@ drawing is a section of her work; choosing one opens that section below.
 
 Nuxt 4 · Vue 3 · TypeScript · GSAP, reading from a Django + Unfold admin.
 
-Server-rendered rather than prerendered: the content comes from the admin, and
-prerendering would freeze it at build time — Neida would save a change and see
-nothing until someone redeployed.
+Built as a static SPA and served by nginx, with no Node process in production —
+the same shape as the graze deployment. Content is fetched from the admin at
+runtime, so Neida saves a change and refreshes to see it; there is no publish
+step and no rebuild.
+
+```
+src/
+  django/    the admin and the read-only API it feeds the site
+  site/      the Nuxt front end
+etc/
+  docker/    Dockerfile, compose, nginx
+  start.sh   local development (Django)
+  build.sh   build the image on the VPS
+  deploy.sh  bring it up on the VPS
+```
+
+## Running it locally
+
+Two processes, in two terminals:
 
 ```bash
-npm install
-npm run dev        # http://localhost:3000
-npm run build      # server build in .output/
+./etc/start.sh                  # admin + API on :8000
+cd src/site && npm run dev      # the site on :3000
 ```
+
+The site proxies `/api` and `/media` to `:8000`, so everything is one origin in
+development exactly as it is behind nginx in production — which is why there is
+no CORS configuration to get wrong.
 
 > **Note:** `npm install` needs `--legacy-peer-deps` on npm 11.5.x, which has a
 > bug resolving Nuxt's peer graph (`Cannot read properties of null (reading
@@ -135,3 +154,35 @@ Two things it has to get right, learned the hard way:
 Also worth checking by hand: turn on **System Settings → Accessibility → Reduce
 Motion** and reload. The vine should appear without the sweep, hold still, and
 navigate instantly.
+
+---
+
+## Deploying
+
+Two containers on the VPS — `web` (Django + gunicorn, serving the API and the
+admin) and `nginx` (serving the built site, the uploads, and proxying the rest).
+Cloudflare in front, as with graze.
+
+```
+Cloudflare → VPS:80 → nginx ─┬─ /              → Nuxt static build
+                              ├─ /api/, /admin/ → gunicorn
+                              ├─ /static/       → gunicorn (WhiteNoise)
+                              └─ /media/        → nginx, straight off the volume
+```
+
+```bash
+cp etc/docker/.env.production.example etc/docker/.env.production   # then fill it in
+./etc/build.sh      # ssh, git pull, docker build
+./etc/deploy.sh     # ssh, docker compose up -d
+```
+
+Both scripts take `VPS_HOST` and `DEPLOY_PATH` from the environment, defaulting
+to `neida` and `/opt/neida`.
+
+**No Postgres.** Graze needs it; this does not — eight sections, a few hundred
+photographs, one editor. SQLite on a volume is ample, is one less service to run
+and upgrade, and backing it up is copying a single file.
+
+Three volumes, and the reason for each: `db_data` and `media_data` hold the only
+things that cannot be rebuilt from the repo, and `frontend_dist` hands the built
+site from the web container to nginx.
