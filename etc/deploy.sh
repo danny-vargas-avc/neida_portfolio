@@ -8,6 +8,15 @@ DEPLOY_PATH="${DEPLOY_PATH:-/opt/neida}"
 # Paths are relative to DEPLOY_PATH, which the ssh command cds into first.
 COMPOSE="docker compose --profile tunnel -f etc/docker/docker-compose.yml --env-file etc/docker/.env.production"
 
+# Pulls as well as starts, and not merely for tidiness: nginx.conf is bind
+# mounted straight from the checkout, so a change to it reaches the running site
+# through this script alone — no image is rebuilt and build.sh is never run.
+# Deploying without pulling served the previous config and reported success,
+# which is how a redirect fix appeared to land twice without changing anything.
+# build.sh pulls too; doing it in both costs a second.
+echo "==> Pulling latest on $VPS_HOST..."
+ssh -A "$VPS_HOST" "cd $DEPLOY_PATH && git pull --ff-only"
+
 echo "==> Starting containers on $VPS_HOST..."
 ssh "$VPS_HOST" "cd $DEPLOY_PATH && $COMPOSE up -d"
 
