@@ -5,20 +5,20 @@
 name: 'Neida Rodriguez'
 role: 'maker · artist · researcher'
 
-# Appears under your name at the top of the page. Keep it to a sentence or two.
-# TODO(neida): replace with your own words.
+# Appears under your name at the top of the page. A sentence or two.
 intro: >-
   I work with flowers, dough, ink and evidence.
 
-# The longer "about" text near the bottom of the page.
-# TODO(neida): replace with your own words.
-about: >-
-  Placeholder. This is where you introduce yourself properly — how these
-  different practices connect, what you are working on now, and what you would
-  like people to get in touch about.
+# A longer introduction, shown near the bottom of the page: how these different
+# practices connect, what you are working on now, what to get in touch about.
+# Left blank, the whole About section is omitted rather than showing an empty
+# heading.
+about: ''
 
-email: '' # TODO(neida): add to show a contact link
-location: '' # TODO(neida): e.g. "Brooklyn, NY"
+# Add an address here and it becomes a contact link in the footer.
+email: ''
+# e.g. "Brooklyn, NY"
+location: ''
 
 links: []
 # Example — uncomment and edit:

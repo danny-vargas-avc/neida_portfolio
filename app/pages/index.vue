@@ -35,6 +35,17 @@ const current = computed(
   () => sections.value.find((s) => s.slug === activeSlug.value) ?? null,
 )
 // The vine only needs each leaf's identity and colour.
+/**
+ * Whether a section has an intro paragraph.
+ *
+ * The bodies ship empty, so without this the note's wrapper still renders and
+ * leaves its bottom margin as a gap between the heading and the work.
+ */
+function hasNote(section: Section) {
+  const body = section.body as { value?: unknown[] } | undefined
+  return Array.isArray(body?.value) && body.value.length > 0
+}
+
 const leafSections = computed(() =>
   sections.value.map((s) => ({ slug: s.slug, accent: s.accent })),
 )
@@ -132,7 +143,7 @@ useHead(() => ({
             <p class="tagline">{{ section.tagline }}</p>
           </header>
 
-          <div class="panel-note prose">
+          <div v-if="hasNote(section)" class="panel-note prose">
             <ContentRenderer :value="section" />
           </div>
 

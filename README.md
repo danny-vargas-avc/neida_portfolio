@@ -46,8 +46,13 @@ To **add a piece of work**:
 `note:` adds a caption in the enlarged view. `alt:` describes the image for
 people using a screen reader — worth filling in.
 
-Search for `TODO(neida)` to find every bit of placeholder text still waiting on
-you.
+The intro paragraphs and the About text ship empty, and the page simply omits
+whatever is left blank — so nothing reads as unfinished while you fill it in.
+Each file says in a comment what belongs where.
+
+Still placeholder, and obvious when you look: every `title: Placeholder` in the
+`pieces:` lists, the example publications and workshops, and the generated
+gallery images.
 
 ---
 
