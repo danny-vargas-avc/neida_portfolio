@@ -11,6 +11,15 @@ COMPOSE="docker compose --profile tunnel -f etc/docker/docker-compose.yml --env-
 echo "==> Starting containers on $VPS_HOST..."
 ssh "$VPS_HOST" "cd $DEPLOY_PATH && $COMPOSE up -d"
 
+# nginx.conf is bind-mounted as a single file, and a bind mount of a file
+# follows the inode. git pull replaces the file rather than editing it, so the
+# container goes on serving the config it started with — `up -d` sees an
+# unchanged service and leaves it running, and even `nginx -s reload` rereads
+# the same stale inode. Recreating is what actually picks up a config change.
+# Unconditional because comparing the two is more work than the second it costs.
+echo "==> Recreating nginx to pick up any nginx.conf change..."
+ssh "$VPS_HOST" "cd $DEPLOY_PATH && $COMPOSE up -d --force-recreate nginx"
+
 echo "==> Status..."
 ssh "$VPS_HOST" "cd $DEPLOY_PATH && $COMPOSE ps"
 
