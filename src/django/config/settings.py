@@ -55,6 +55,14 @@ if not SECRET_KEY:
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "")
 
+if DEBUG:
+    # In development the Nuxt server proxies /api here, so the browser's Origin
+    # is its own address while this process answers on another port. Django
+    # reads that mismatch as a CSRF failure, which is what any write from the
+    # portal hits first. Development only: in production nginx serves the site
+    # and the API from one origin, so the two already agree.
+    CSRF_TRUSTED_ORIGINS += ["http://localhost:3000", "http://127.0.0.1:3000"]
+
 # TLS is terminated before this process — by Cloudflare, over the tunnel — so
 # the request arrives as plain HTTP and Django would otherwise treat it as
 # insecure, refuse to set secure cookies, and reject the admin login on CSRF.

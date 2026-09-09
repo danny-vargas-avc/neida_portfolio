@@ -13,6 +13,9 @@ export default defineNuxtConfig({
     families: [
       { name: 'Fraunces', provider: 'google', weights: [400, 500, 600], styles: ['normal', 'italic'] },
       { name: 'Karla', provider: 'google', weights: [400, 500, 700], styles: ['normal'] },
+      // Portal only. The face is referenced from manage.css, which ships in the
+      // /manage route chunk, so a visitor to the public site never fetches it.
+      { name: 'Bricolage Grotesque', provider: 'google', weights: [500, 600, 700], styles: ['normal'] },
     ],
     defaults: { fallbacks: { serif: ['Iowan Old Style', 'Georgia'] } },
   },

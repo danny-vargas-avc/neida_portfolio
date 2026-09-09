@@ -1,0 +1,701 @@
+/**
+ * The portal's own surface.
+ *
+ * Related to the site but not the same thing. The public page is a quiet
+ * gallery where the interface gets out of the way; this is a tool held in one
+ * hand, so it wants firmer surfaces, larger targets and clearer edges. It keeps
+ * the site's typefaces and the eight leaf accents, and little else.
+ *
+ * Depth does the work that borders used to: cards sit on the ground with a soft
+ * shadow rather than a hairline, which reads as an app rather than as a
+ * document, and keeps a screen of stacked lists from looking like a table.
+ *
+ * Sized for a phone first. Wider screens get a centred column rather than a
+ * different layout — there is no desktop-only affordance to miss.
+ */
+
+.mg {
+
+  --mg-ground: #f4f3f1;
+  --mg-card: #ffffff;
+  --mg-sunk: #ebe9e6;
+  --mg-edge: #e4e1dc;
+  --mg-edge-strong: #d3cfc8;
+
+  --mg-ink: #14130f;
+  --mg-ink-soft: #63605a;
+  --mg-ink-faint: #96918a;
+
+  --mg-danger: #b23c2c;
+  --mg-good: #3a7a52;
+
+  /* Two shadows per surface: a tight one for the edge, a wide soft one for the
+     lift. One alone reads as either a border or a smudge. */
+  --mg-lift:
+    0 1px 2px rgb(20 18 15 / 0.05),
+    0 8px 24px -12px rgb(20 18 15 / 0.16);
+  --mg-lift-high:
+    0 2px 6px rgb(20 18 15 / 0.07),
+    0 24px 48px -20px rgb(20 18 15 / 0.28);
+
+  /* Set per section from its leaf colour, so editing florals feels different
+     from editing clay without anything being relabelled. */
+  --mg-accent: var(--accent-clay);
+  --mg-on-accent: #fff;
+
+  /* Titles and group headings only. The site's Fraunces is a warm editorial
+     serif that belongs on the gallery page; in a tool it reads as a document
+     heading rather than as an app's chrome. Bricolage is a grotesque with
+     enough irregularity to still feel hand-made, which is the register the rest
+     of this project is in. Karla stays on everything that is read or typed. */
+  --mg-display: 'Bricolage Grotesque', 'Karla', ui-sans-serif, system-ui, sans-serif;
+
+  --mg-radius: 12px;
+  --mg-radius-lg: 20px;
+
+  /* Touch targets. 44px is the floor; 48 is comfortable with gloves, flour, or
+     one hand on a phone. */
+  --mg-tap: 48px;
+
+  --mg-safe-top: env(safe-area-inset-top, 0px);
+  --mg-safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  background: var(--mg-ground);
+  color: var(--mg-ink);
+  font-family: var(--font-body);
+  min-height: 100dvh;
+  font-size: 16px; /* iOS zooms the page if an input is under 16px. */
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+}
+
+/*
+  Dark is not an inversion: the ground lifts off pure black so shadows still
+  read, and the accents are lightened, because a colour picked to sit on paper
+  goes muddy on charcoal.
+
+  Keyed off a class on <html> rather than a media query, because a choice she
+  has made has to be able to beat the operating system. useManageTheme decides
+  which it is and sets the class; this is the only place the tokens differ, so
+  there is one dark palette rather than two copies drifting apart.
+*/
+html.mg-dark .mg {
+  --mg-ground: #16151a;
+  --mg-card: #1e1d23;
+  --mg-sunk: #26252c;
+  --mg-edge: #2e2d35;
+  --mg-edge-strong: #423f4a;
+
+  --mg-ink: #f2f0ee;
+  --mg-ink-soft: #a5a19c;
+  --mg-ink-faint: #78746f;
+
+  --mg-danger: #ef8a78;
+  --mg-good: #6bbd8c;
+
+  /* The leaf colours are picked to sit on paper and go muddy on charcoal, so
+     text on an accent flips to dark rather than staying white. */
+  --mg-on-accent: #14130f;
+
+  --mg-lift:
+    0 1px 2px rgb(0 0 0 / 0.4),
+    0 8px 24px -12px rgb(0 0 0 / 0.6);
+  --mg-lift-high:
+    0 2px 6px rgb(0 0 0 / 0.5),
+    0 24px 48px -20px rgb(0 0 0 / 0.8);
+}
+
+/* The tile behind a segmented control's selected item needs to lift off a dark
+   ground, where a black shadow does nothing. */
+html.mg-dark .mg-seg button[aria-pressed='true'] {
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+}
+
+html.mg-dark .mg-photo-index { background: rgb(0 0 0 / 0.6); }
+
+/* The site underlines every link and tints the rule with the accent. Here a row
+   is a link, so that turns a list into a page of underlined text. */
+.mg a { text-decoration: none; color: inherit; }
+
+/* --- structure ------------------------------------------------------------ */
+
+.mg-shell {
+  max-width: 560px;
+  margin-inline: auto;
+  padding-inline: 16px;
+}
+
+.mg-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding-top: calc(var(--mg-safe-top) + 8px);
+  padding-bottom: 8px;
+  background: color-mix(in oklab, var(--mg-ground) 72%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 180ms ease;
+}
+
+.mg-header.is-stuck { border-bottom-color: var(--mg-edge); }
+
+.mg-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+}
+
+.mg-header-text { flex: 1; min-width: 0; }
+
+/* Names the screen without spending a line on a second heading. Uppercase and
+   tracked out so it reads as a label rather than as text that got small. */
+.mg-eyebrow {
+  margin: 0 0 1px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mg-accent);
+}
+
+.mg-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+}
+
+.mg-title {
+  font-family: var(--mg-display);
+  font-weight: 700;
+  font-size: 1.36rem;
+  line-height: 1.15;
+  /* Grotesques at display weight need the tracking pulled in or they read as
+     set too loose. */
+  letter-spacing: -0.032em;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mg-body {
+  padding-block: 10px calc(var(--mg-safe-bottom) + 100px);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* --- cards ---------------------------------------------------------------- */
+
+.mg-card {
+  background: var(--mg-card);
+  border-radius: var(--mg-radius-lg);
+  box-shadow: var(--mg-lift);
+  overflow: hidden;
+}
+
+/* Section headings sit outside the card, the way a grouped list does — it
+   separates "what this is" from "the thing itself" without a rule. */
+.mg-group { display: flex; flex-direction: column; gap: 8px; }
+
+.mg-card-title {
+  font-family: var(--mg-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  color: var(--mg-ink-soft);
+  margin: 0;
+  padding-inline: 4px;
+}
+
+.mg-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px 2px;
+}
+
+/* --- rows ----------------------------------------------------------------- */
+
+.mg-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  min-height: 62px;
+  padding: 11px 14px;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+
+/* Inset rule, stopping short of the thumbnail — the detail that separates a
+   grouped list from a plain stack of divs. */
+.mg-row + .mg-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 66px;
+  right: 0;
+  height: 1px;
+  background: var(--mg-edge);
+}
+
+.mg-row:active { background: var(--mg-sunk); }
+
+.mg-row-main { flex: 1; min-width: 0; }
+
+.mg-row-label {
+  font-family: var(--mg-display);
+  font-weight: 600;
+  font-size: 1.04rem;
+  letter-spacing: -0.017em;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mg-row-sub {
+  display: block;
+  color: var(--mg-ink-soft);
+  font-size: 0.86rem;
+  margin-top: 1px;
+}
+
+.mg-chevron { color: var(--mg-ink-faint); flex: none; }
+
+/*
+  The leading square: a photograph when the section has one, otherwise a tile in
+  the leaf's own colour. Always the same size and place, so the list stays a
+  column rather than reflowing around whichever sections have pictures.
+*/
+.mg-thumb {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 11px;
+  overflow: hidden;
+  background: var(--mg-sunk);
+  display: grid;
+  place-items: center;
+}
+
+.mg-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.mg-thumb-tint {
+  width: 100%;
+  height: 100%;
+  background: color-mix(in oklab, var(--mg-row-accent, var(--mg-accent)) 20%, transparent);
+  display: grid;
+  place-items: center;
+}
+
+.mg-thumb-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--mg-row-accent, var(--mg-accent));
+}
+
+/* --- fields --------------------------------------------------------------- */
+
+.mg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 15px 16px;
+}
+
+.mg-field + .mg-field { border-top: 1px solid var(--mg-edge); }
+
+.mg-label {
+  font-size: 0.79rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--mg-ink-soft);
+}
+
+.mg-input,
+.mg-textarea,
+.mg-select {
+  width: 100%;
+  min-height: var(--mg-tap);
+  padding: 12px 13px;
+  background: var(--mg-ground);
+  border: 1px solid transparent;
+  border-radius: var(--mg-radius);
+  font: inherit;
+  color: var(--mg-ink);
+  -webkit-appearance: none;
+  appearance: none;
+  transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.mg-input::placeholder,
+.mg-textarea::placeholder { color: var(--mg-ink-faint); }
+
+.mg-textarea { min-height: 112px; resize: vertical; line-height: 1.55; }
+
+.mg-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2363605a' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 18px;
+  padding-right: 42px;
+}
+
+.mg-input:focus,
+.mg-textarea:focus,
+.mg-select:focus {
+  outline: none;
+  background: var(--mg-card);
+  box-shadow: 0 0 0 2px var(--mg-accent);
+}
+
+.mg-help { font-size: 0.81rem; color: var(--mg-ink-faint); }
+.mg-error { font-size: 0.81rem; color: var(--mg-danger); font-weight: 600; }
+
+.mg-input.is-bad,
+.mg-textarea.is-bad { box-shadow: 0 0 0 2px var(--mg-danger); }
+
+/* --- segmented control ---------------------------------------------------- */
+/* Three options, always visible: a select would hide two of them behind a tap
+   and a system wheel, for a choice that is quicker to see than to read. */
+
+.mg-seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 3px;
+  padding: 3px;
+  background: var(--mg-ground);
+  border-radius: var(--mg-radius);
+}
+
+.mg-seg button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--mg-ink-soft);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.mg-seg button[aria-pressed='true'] {
+  background: var(--mg-card);
+  color: var(--mg-ink);
+  box-shadow: 0 1px 3px rgb(20 18 15 / 0.14);
+}
+
+/* --- buttons -------------------------------------------------------------- */
+
+.mg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--mg-tap);
+  padding-inline: 18px;
+  border-radius: var(--mg-radius);
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1), opacity 120ms ease, filter 120ms ease;
+}
+
+.mg-btn:active { transform: scale(0.97); }
+.mg-btn[disabled] { opacity: 0.45; cursor: default; transform: none; }
+
+.mg-btn-primary {
+  background: var(--mg-accent);
+  color: var(--mg-on-accent);
+  box-shadow: var(--mg-lift);
+}
+
+.mg-btn-primary:active { filter: brightness(0.94); }
+
+.mg-btn-quiet {
+  background: var(--mg-ground);
+  color: var(--mg-ink);
+}
+
+.mg-btn-danger { background: none; color: var(--mg-danger); }
+.mg-btn-block { width: 100%; }
+
+.mg-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--mg-tap);
+  height: var(--mg-tap);
+  margin-left: -12px;
+  border: 0;
+  background: none;
+  border-radius: 50%;
+  color: var(--mg-ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mg-icon-btn:active { background: var(--mg-sunk); }
+
+/*
+  Header controls. Given their own surface rather than left as bare glyphs on
+  the ground: floating over a blurred, scrolling page, an unbacked icon reads as
+  decoration, and there is nothing to aim at. 38px keeps two of them clear of
+  the title while staying inside the 44px tap floor once the padding counts.
+*/
+.mg-round-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--mg-card);
+  box-shadow: var(--mg-lift);
+  color: var(--mg-ink-soft);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1), color 140ms ease;
+}
+
+.mg-round-btn:active { transform: scale(0.9); color: var(--mg-ink); }
+
+.mg-round-btn:focus-visible {
+  outline: 2px solid var(--mg-accent);
+  outline-offset: 2px;
+}
+
+/* Small pill in the header. */
+.mg-btn-sm { min-height: 38px; padding-inline: 14px; font-size: 0.86rem; border-radius: 999px; }
+
+/* --- save state ----------------------------------------------------------- */
+
+.mg-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.79rem;
+  font-weight: 600;
+  color: var(--mg-ink-faint);
+  min-width: 58px;
+  justify-content: flex-end;
+  transition: color 200ms ease;
+}
+
+.mg-status.is-saved { color: var(--mg-good); }
+.mg-status.is-failed { color: var(--mg-danger); }
+
+/* --- toast ---------------------------------------------------------------- */
+
+.mg-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--mg-safe-bottom) + 22px);
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 13px 20px;
+  border-radius: 999px;
+  background: var(--mg-ink);
+  color: var(--mg-ground);
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: var(--mg-lift-high);
+}
+
+.mg-toast.is-bad { background: var(--mg-danger); color: #fff; }
+
+.mg-toast-enter-active,
+.mg-toast-leave-active {
+  transition: opacity 220ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mg-toast-enter-from,
+.mg-toast-leave-to { opacity: 0; transform: translate(-50%, 16px) scale(0.96); }
+
+/* --- sheet ---------------------------------------------------------------- */
+
+.mg-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgb(14 12 10 / 0.5);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.mg-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  max-height: 90dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--mg-ground);
+  border-radius: 24px 24px 0 0;
+  padding-bottom: calc(var(--mg-safe-bottom) + 16px);
+  box-shadow: var(--mg-lift-high);
+}
+
+.mg-sheet-grip {
+  width: 40px;
+  height: 5px;
+  margin: 9px auto 2px;
+  border-radius: 999px;
+  background: var(--mg-edge-strong);
+}
+
+.mg-sheet-enter-active,
+.mg-sheet-leave-active { transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+.mg-sheet-enter-from,
+.mg-sheet-leave-to { transform: translateY(100%); }
+
+.mg-scrim-enter-active,
+.mg-scrim-leave-active { transition: opacity 240ms ease; }
+
+.mg-scrim-enter-from,
+.mg-scrim-leave-to { opacity: 0; }
+
+/* --- photo grid ----------------------------------------------------------- */
+
+.mg-photos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  padding: 12px;
+}
+
+.mg-photo {
+  position: relative;
+  aspect-ratio: 1;
+  border: 0;
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--mg-sunk);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease;
+}
+
+.mg-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.mg-photo.is-dragging {
+  opacity: 0.4;
+  transform: scale(1.08);
+  z-index: 2;
+}
+
+.mg-photo.is-over { outline: 2.5px solid var(--mg-accent); outline-offset: -2px; }
+
+.mg-photo-index {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  min-width: 19px;
+  height: 19px;
+  padding-inline: 5px;
+  border-radius: 999px;
+  background: rgb(14 12 10 / 0.55);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 0.69rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.mg-photo-pending {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--mg-card) 72%, transparent);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+/* --- empty state ---------------------------------------------------------- */
+
+.mg-empty {
+  padding: 34px 22px;
+  text-align: center;
+  color: var(--mg-ink-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.mg-empty strong {
+  font-family: var(--mg-display);
+  color: var(--mg-ink);
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: -0.015em;
+}
+
+/* --- misc ----------------------------------------------------------------- */
+
+.mg-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--mg-sunk);
+  color: var(--mg-ink-soft);
+  flex: none;
+}
+
+.mg-spin {
+  width: 17px;
+  height: 17px;
+  border: 2px solid color-mix(in oklab, currentColor 25%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: mg-spin 660ms linear infinite;
+}
+
+@keyframes mg-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mg *,
+  .mg *::before { transition-duration: 0.01ms !important; }
+  .mg-spin { animation-duration: 3s; }
+}
