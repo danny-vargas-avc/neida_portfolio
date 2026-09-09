@@ -13,8 +13,12 @@ text or an upload. The fields that must line up with the drawing or the code
 (slug, accent, kind) are kept together and out of the way in the admin.
 """
 
+from pathlib import Path
+
 from django.core.validators import FileExtensionValidator, RegexValidator
 from django.db import models
+
+from .imaging import prepare
 
 
 class LeafSlug(models.TextChoices):
@@ -187,7 +191,17 @@ class Piece(models.Model):
         SQUARE = "square", "Square"
 
     section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name="pieces")
-    image = models.ImageField(upload_to="pieces/%Y/%m/", help_text="JPEG or PNG.")
+    image = models.ImageField(
+        upload_to="pieces/%Y/%m/",
+        help_text="A photograph from your phone or camera is exactly right.",
+    )
+    # Written by save(), never chosen. Hidden from the admin: it is the same
+    # picture, and offering it as a field to fill in would only be confusing.
+    thumbnail = models.ImageField(
+        upload_to="pieces/%Y/%m/",
+        blank=True,
+        editable=False,
+    )
     title = models.CharField(max_length=140, help_text="Shown when the picture is opened.")
     year = models.PositiveIntegerField(null=True, blank=True)
     note = models.TextField(blank=True, help_text="An optional caption, shown when opened.")
@@ -214,6 +228,27 @@ class Piece(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+    def _image_is_new(self) -> bool:
+        """True when this save is carrying a picture that has not been prepared."""
+        if not self.image:
+            return False
+        if not self.pk:
+            return True
+        stored = Piece.objects.filter(pk=self.pk).values_list("image", flat=True).first()
+        return self.image.name != stored
+
+    def save(self, *args, **kwargs):
+        # Done here rather than in the admin so it applies however a picture
+        # arrives — the admin, a shell, a future import script.
+        if self._image_is_new():
+            full, thumb = prepare(self.image)
+            stem = Path(self.image.name).stem
+            # save=False on both: they only set the field's filename, and the
+            # single super().save() below is what writes the row.
+            self.image.save(f"{stem}.webp", full, save=False)
+            self.thumbnail.save(f"{stem}-thumb.webp", thumb, save=False)
+        super().save(*args, **kwargs)
 
 
 class Publication(models.Model):

@@ -57,7 +57,7 @@ class PieceInline(TabularInline):
 
     @admin.display(description="")
     def preview(self, obj):
-        return thumbnail(obj.image)
+        return thumbnail(obj.thumbnail or obj.image)
 
 
 class PublicationInline(StackedInline):
@@ -164,4 +164,4 @@ class PieceAdmin(ModelAdmin):
 
     @admin.display(description="")
     def preview(self, obj):
-        return thumbnail(obj.image, height=48)
+        return thumbnail(obj.thumbnail or obj.image, height=48)

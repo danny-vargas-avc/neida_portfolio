@@ -26,7 +26,15 @@ def absolute(url: str | None) -> str | None:
 
 def piece_json(piece):
     return {
+        # Two sizes of the same picture: the grid draws small cells and the
+        # lightbox fills the screen, and sending the large one to both was
+        # costing about ten times the bytes the grid actually shows.
         "image": absolute(piece.image.url if piece.image else None),
+        # Falls back to the full image for anything uploaded before the sizes
+        # were split, so an unprocessed row still renders.
+        "thumbnail": absolute(
+            (piece.thumbnail or piece.image).url if piece.image else None
+        ),
         "title": piece.title,
         "year": piece.year,
         "note": piece.note or None,

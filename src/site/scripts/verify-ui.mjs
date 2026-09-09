@@ -178,16 +178,26 @@ await page.waitForTimeout(400)
 await page.screenshot({ path: `${OUT}/pw-section.png` })
 
 // --- lightbox: opens, traps focus, locks scroll, restores on Escape --------
-// The gallery is empty until pictures are uploaded through the admin, which is
-// the expected starting state — so this is skipped rather than failed.
-await selectLeaf('clay')
-await page.waitForTimeout(500)
-const tiles = await page.locator('#panel-clay .tile').count()
+// Whichever section has pictures, rather than a fixed one: galleries fill up in
+// whatever order Neida works, and pinning this to a named section meant the
+// check quietly skipped even once photographs existed elsewhere.
+const withPhotos = await page.evaluate(async () => {
+  const res = await fetch('/api/content/')
+  const { sections } = await res.json()
+  return sections.find((s) => (s.pieces || []).length > 0)?.slug ?? null
+})
+
+let tiles = 0
+if (withPhotos) {
+  await selectLeaf(withPhotos)
+  await page.waitForTimeout(500)
+  tiles = await page.locator(`#panel-${withPhotos} .tile`).count()
+}
 
 if (tiles === 0) {
   console.log('SKIP  lightbox — no pictures uploaded yet')
 } else {
-  await page.locator('#panel-clay .tile').first().click()
+  await page.locator(`#panel-${withPhotos} .tile`).first().click()
   await page.waitForTimeout(600)
   const lb = await page.evaluate(() => {
   const d = document.querySelector('[role="dialog"]')

@@ -12,15 +12,6 @@ import type { Piece } from '~/types/content'
 defineProps<{ pieces: Piece[] }>()
 
 const openIndex = ref<number | null>(null)
-
-/**
- * The placeholders are SVG, which the image optimiser can't resize — and
- * routing them through it produces a broken request rather than a fallback.
- * Real photographs (jpg/png/webp) still get the full responsive treatment.
- */
-function isVector(src: string) {
-  return src.toLowerCase().endsWith('.svg')
-}
 </script>
 
 <template>
@@ -28,21 +19,20 @@ function isVector(src: string) {
     <ul class="grid">
       <li v-for="(piece, i) in pieces" :key="piece.image" class="cell">
         <button type="button" class="tile" @click="openIndex = i">
+          <!--
+            A plain img, deliberately. <NuxtImg> rewrites the src to /_ipx/…,
+            which needs an image server running behind the site; this deploys as
+            a static build served by nginx, so that URL matched nginx's SPA
+            fallback and every photograph arrived as a copy of index.html. The
+            resizing it would have done now happens in Django on upload, which
+            is the only place in this setup that can do it.
+          -->
           <img
-            v-if="isVector(piece.image)"
-            :src="piece.image"
+            :src="piece.thumbnail || piece.image"
             :alt="piece.alt || piece.title"
             loading="lazy"
             decoding="async"
           >
-          <NuxtImg
-            v-else
-            :src="piece.image"
-            :alt="piece.alt || piece.title"
-            sizes="100vw sm:50vw lg:33vw"
-            loading="lazy"
-            format="webp"
-          />
           <span class="sr-only">View {{ piece.title }} larger</span>
         </button>
       </li>

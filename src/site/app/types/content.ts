@@ -1,7 +1,10 @@
 export type SectionKind = 'gallery' | 'research' | 'writing' | 'teaching'
 
 export interface Piece {
+  /** The large version, shown in the lightbox. */
   image: string
+  /** The small version for the grid. Falls back to `image` server-side. */
+  thumbnail?: string
   title: string
   year?: number
   note?: string
