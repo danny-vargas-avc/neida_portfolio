@@ -4,6 +4,13 @@
 const SITE_NAME = 'Neida Rodriguez'
 const SITE_TAGLINE = 'Florals, cake, drawings, textiles, clay, film, teaching and research.'
 const SITE_ORIGIN = 'https://neidarodriguez.com'
+// Named for what it shows, and renamed whenever that changes.
+//
+// Not a version counter — a name. Both Cloudflare and the platforms that build
+// link previews cache an image by its URL, the latter for days, so replacing
+// the file at a stable path leaves the old picture showing in messages long
+// after the site has moved on. A new name is fetched immediately, everywhere.
+const SHARE_IMAGE = 'og-flower.png'
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-09-06',
@@ -53,7 +60,7 @@ export default defineNuxtConfig({
         { property: 'og:title', content: SITE_NAME },
         { property: 'og:description', content: SITE_TAGLINE },
         { property: 'og:url', content: SITE_ORIGIN + '/' },
-        { property: 'og:image', content: SITE_ORIGIN + '/og.png' },
+        { property: 'og:image', content: SITE_ORIGIN + '/' + SHARE_IMAGE },
         // Stated so the card reserves the right shape before the image loads.
         { property: 'og:image:width', content: '1200' },
         { property: 'og:image:height', content: '630' },
@@ -62,7 +69,7 @@ export default defineNuxtConfig({
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:title', content: SITE_NAME },
         { name: 'twitter:description', content: SITE_TAGLINE },
-        { name: 'twitter:image', content: SITE_ORIGIN + '/og.png' },
+        { name: 'twitter:image', content: SITE_ORIGIN + '/' + SHARE_IMAGE },
       ],
       link: [
         // SVG for browsers that take it, PNG for the ones that do not, and the
