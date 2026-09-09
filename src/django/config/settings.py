@@ -115,9 +115,11 @@ MEDIA_URL = "media/"
 # without the app's own files getting in the way.
 MEDIA_ROOT = Path(os.environ.get("DJANGO_MEDIA_ROOT", BASE_DIR / "media"))
 
-# Absolute base for URLs handed to the front end. The front end runs on a
-# different origin, so relative media paths would resolve against Nuxt and 404.
-PUBLIC_BASE_URL = os.environ.get("DJANGO_PUBLIC_BASE_URL", "http://127.0.0.1:8000")
+# Prefix for media URLs handed to the front end. Empty by default, because the
+# site and the admin are served from one origin — nginx in production, the Nuxt
+# dev proxy in development — so relative URLs resolve correctly and there is one
+# less thing to configure wrongly. Set it only if the two are ever split apart.
+PUBLIC_BASE_URL = os.environ.get("DJANGO_PUBLIC_BASE_URL", "")
 
 # --- the front end ----------------------------------------------------------
 

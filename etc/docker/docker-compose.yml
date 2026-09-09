@@ -1,0 +1,36 @@
+# Two services rather than graze's three: this site has eight sections and one
+# editor, so SQLite on a volume is ample and Postgres would be a service to run,
+# back up and upgrade for no benefit. Backing up is copying one file.
+
+services:
+  web:
+    build:
+      context: ../..
+      dockerfile: etc/docker/Dockerfile
+    restart: unless-stopped
+    env_file: .env.production
+    volumes:
+      # The built front end, handed to nginx.
+      - frontend_dist:/app/frontend-serve
+      # Neida's uploaded photographs. On a volume so they survive a redeploy —
+      # they are the one thing here that cannot be rebuilt from the repo.
+      - media_data:/app/media
+      # The database, likewise.
+      - db_data:/data
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - frontend_dist:/app/frontend:ro
+      - media_data:/app/media:ro
+    depends_on:
+      - web
+
+volumes:
+  frontend_dist:
+  media_data:
+  db_data:

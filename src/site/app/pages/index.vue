@@ -24,6 +24,8 @@ const { apiBase } = useRuntimeConfig().public
 const { data, error } = await useAsyncData('content', () =>
   $fetch<{ site: SiteInfo; sections: Section[] }>(`${apiBase}/api/content/`),
 )
+// `apiBase` is empty by default, so this is a same-origin request: nginx routes
+// it in production, the dev proxy in development.
 
 if (error.value) {
   // Better a clear failure than a page that renders as an empty drawing and

@@ -1,0 +1,13 @@
+src/site/node_modules
+src/site/.nuxt
+src/site/.output
+src/site/.data
+src/site/dist
+.git
+src/django/.venv
+src/django/db.sqlite3
+src/django/media
+src/django/staticfiles
+**/__pycache__
+*.log
+etc/docker/.env.production

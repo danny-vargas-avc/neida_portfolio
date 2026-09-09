@@ -1,11 +1,11 @@
 # Nuxt
-.nuxt/
-.output/
-.data/
-dist/
+src/site/.nuxt/
+src/site/.output/
+src/site/.data/
+src/site/dist/
 
 # Dependencies
-node_modules/
+src/site/node_modules/
 
 # Logs
 *.log
@@ -15,6 +15,7 @@ logs/
 .env
 .env.*
 !.env.example
+etc/docker/.env.production
 
 # Editor / OS
 .DS_Store

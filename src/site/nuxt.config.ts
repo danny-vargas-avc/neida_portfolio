@@ -48,11 +48,17 @@ export default defineNuxtConfig({
     },
   },
 
+  // Built to static files and served by nginx, with no Node process in
+  // production — the same shape as the graze deployment. The vine's fade-in
+  // covers the API request, so nothing is visibly waiting.
+  ssr: false,
+
   runtimeConfig: {
     public: {
-      // Where the Django admin's read-only feed lives. Override in production
-      // with NUXT_PUBLIC_API_BASE.
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000',
+      // Empty means same-origin. In production nginx proxies /api/ to Django,
+      // and in development the devProxy below does the same, so the app can use
+      // relative URLs everywhere and CORS never enters into it.
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || '',
     },
   },
 
@@ -63,11 +69,13 @@ export default defineNuxtConfig({
     format: ['avif', 'webp', 'jpeg'],
   },
 
-  // Rendered per request rather than prerendered: the content now comes from
-  // the Django admin, and prerendering would freeze it at build time — Neida
-  // would save a change and see nothing until someone redeployed.
   nitro: {
-    prerender: { crawlLinks: false, routes: [] },
+    // Django serves the API and the uploaded images. Proxying them in dev keeps
+    // the front end on one origin, matching how nginx routes in production.
+    devProxy: {
+      '/api': { target: 'http://127.0.0.1:8000/api', changeOrigin: true },
+      '/media': { target: 'http://127.0.0.1:8000/media', changeOrigin: true },
+    },
   },
 
   typescript: {
