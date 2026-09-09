@@ -14,7 +14,10 @@ logs/
 # Environment
 .env
 .env.*
-!.env.example
+# Templates carry no secrets and are the only record of what must be set, so a
+# fresh clone needs them. The narrower !.env.example missed
+# .env.production.example, which .env.* had already excluded.
+!.env*.example
 etc/docker/.env.production
 
 # Editor / OS
