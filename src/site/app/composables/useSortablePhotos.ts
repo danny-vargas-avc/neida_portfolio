@@ -46,8 +46,10 @@ export function useSortablePhotos(commit: (from: number, to: number) => void) {
   let armed = false
   let edgeFrame: number | undefined
   let edgeVelocity = 0
-  // Read by the click handler; a drag that just ended must not open the editor.
-  let blockClickUntil = 0
+  // Whether this pointer sequence turned into a drag. Read by the click that
+  // follows, and cleared by the next press — not by a timer, because "how long
+  // after the drop does the click arrive" has no reliable answer.
+  let draggedThisPress = false
 
   function stopEdgeScroll() {
     if (edgeFrame !== undefined) cancelAnimationFrame(edgeFrame)
@@ -96,6 +98,7 @@ export function useSortablePhotos(commit: (from: number, to: number) => void) {
     startY = event.clientY
     pendingIndex = index
     armed = true
+    draggedThisPress = false
 
     // Keeps every later pointer event coming to this element even once the
     // finger has moved off it, which is most of a drag.
@@ -105,6 +108,7 @@ export function useSortablePhotos(commit: (from: number, to: number) => void) {
       if (!armed) return
       from.value = index
       over.value = index
+      draggedThisPress = true
       navigator.vibrate?.(12)
     }, HOLD_MS)
   }
@@ -153,27 +157,24 @@ export function useSortablePhotos(commit: (from: number, to: number) => void) {
   function onPointerUp() {
     const start = from.value
     const end = over.value
-    if (start !== null) {
-      // Long enough to outlive the click this pointer sequence will fire.
-      blockClickUntil = performance.now() + 400
-      if (end !== null && end !== start) commit(start, end)
-    }
+    if (start !== null && end !== null && end !== start) commit(start, end)
     reset()
   }
 
   /**
    * Eats the click that ends a drag, before it reaches the tile.
    *
-   * Bound in the capture phase deliberately. Checking a flag inside the tile's
-   * own click handler depends on that handler running after pointerup, and a
-   * reorder replaces the tiles — so the click can land on an element Vue only
-   * just created, in an order that is not guaranteed. Stopping it on the way
-   * down does not care about either.
+   * Bound in the capture phase deliberately, and keyed off the press rather
+   * than a stopwatch. A reorder replaces the tiles, so the click can land on an
+   * element Vue only just created; stopping it on the way down does not care
+   * which element that is, and asking "did this press become a drag" does not
+   * care how long the browser took to deliver the click.
    */
   function onClickCapture(event: MouseEvent) {
-    if (performance.now() < blockClickUntil) {
+    if (draggedThisPress) {
       event.stopPropagation()
       event.preventDefault()
+      draggedThisPress = false
     }
   }
 

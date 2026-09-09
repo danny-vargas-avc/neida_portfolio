@@ -1,4 +1,10 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+// Baked into the served HTML for link previews. See app.head below for why
+// these are constants rather than read from the admin.
+const SITE_NAME = 'Neida Rodriguez'
+const SITE_TAGLINE = 'Florals, cake, drawings, textiles, clay, film, teaching and research.'
+const SITE_ORIGIN = 'https://neidarodriguez.com'
+
 export default defineNuxtConfig({
   compatibilityDate: '2026-09-06',
   devtools: { enabled: true },
@@ -23,11 +29,49 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: 'en' },
+      // Written here, not with useHead on the page.
+      //
+      // The site renders in the browser, so useHead runs in the browser — and
+      // the things that make a shared link look like anything (iMessage, Slack,
+      // WhatsApp, search engines) read the HTML without running any script.
+      // They were seeing a blank shell: no title, no description, no image, so
+      // a shared link was a bare URL. These are in the file the server sends.
+      //
+      // The cost of that is they are fixed at build time. Changing the tagline
+      // in the admin updates the page but not the preview until the next
+      // deploy, which is the right trade for text that changes once a year.
+      title: SITE_NAME,
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'description', content: SITE_TAGLINE },
+
+        // The name is the headline and the tagline the subtitle: a link is
+        // recognised by whose it is, and explained by what she does.
+        { property: 'og:type', content: 'website' },
+        { property: 'og:site_name', content: SITE_NAME },
+        { property: 'og:title', content: SITE_NAME },
+        { property: 'og:description', content: SITE_TAGLINE },
+        { property: 'og:url', content: SITE_ORIGIN + '/' },
+        { property: 'og:image', content: SITE_ORIGIN + '/og.png' },
+        // Stated so the card reserves the right shape before the image loads.
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
+        { property: 'og:image:alt', content: 'Neida Rodriguez’s hand-drawn vine, its leaves labelled with the work she does.' },
+
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: SITE_NAME },
+        { name: 'twitter:description', content: SITE_TAGLINE },
+        { name: 'twitter:image', content: SITE_ORIGIN + '/og.png' },
       ],
-      link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+      link: [
+        // SVG for browsers that take it, PNG for the ones that do not, and the
+        // touch icon for a link saved to a phone's home screen.
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32.png' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+        { rel: 'canonical', href: SITE_ORIGIN + '/' },
+      ],
       script: [
         {
           // Two flags, both before first paint:
