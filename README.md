@@ -189,6 +189,11 @@ To run the stack locally, or to reach into a running one, use `./etc/compose.sh`
 Both scripts take `VPS_HOST` and `DEPLOY_PATH` from the environment, defaulting
 to `neida` and `/opt/neida`.
 
+**Sharing a VPS.** This stack binds host port 80 by default, and so does graze —
+two of them on one box will not both start. Set `HTTP_BIND=127.0.0.1:8081` in
+`.env.production` and route by hostname from a proxy in front, or give it its
+own VPS.
+
 **No Postgres.** Graze needs it; this does not — eight sections, a few hundred
 photographs, one editor. SQLite on a volume is ample, is one less service to run
 and upgrade, and backing it up is copying a single file.

@@ -22,7 +22,11 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     ports:
-      - "80:80"
+      # Whole mapping, so it can be a bare port or an address. Graze also binds
+      # host :80, so putting both on one VPS needs this changed here — set
+      # HTTP_BIND=127.0.0.1:8081 and route by hostname from a shared proxy in
+      # front. Left alone, this stack takes :80 as the only thing on the box.
+      - "${HTTP_BIND:-80}:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - frontend_dist:/app/frontend:ro
