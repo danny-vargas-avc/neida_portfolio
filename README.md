@@ -176,14 +176,54 @@ cp etc/docker/.env.production.example etc/docker/.env.production   # then fill i
 ./etc/deploy.sh     # ssh, docker compose up -d
 ```
 
-To run the stack locally, or to reach into a running one, use `./etc/compose.sh`
-— it takes any docker compose subcommand and works from any directory:
+Two helpers wrap docker compose so the long invocation is not repeated:
+`./etc/compose.sh` runs it here, `./etc/remote.sh` runs it on the VPS. Both take
+any subcommand and work from any directory.
 
 ```bash
-./etc/compose.sh up -d
-./etc/compose.sh exec web python manage.py createsuperuser
-./etc/compose.sh logs -f web
-./etc/compose.sh down
+./etc/compose.sh up -d                 # locally
+./etc/remote.sh ps                     # on the VPS
+./etc/remote.sh logs web --tail 50
+./etc/remote.sh exec web python manage.py createsuperuser
+```
+
+### First-time VPS setup
+
+1. Clone to `/opt/neida`, and add a `neida` host to your `~/.ssh/config`.
+   (Both are overridable: `VPS_HOST` and `DEPLOY_PATH`.)
+2. Fill in the environment:
+   ```bash
+   cp etc/docker/.env.production.example etc/docker/.env.production
+   ```
+   `DJANGO_SECRET_KEY` at minimum, and the real domain in
+   `DJANGO_ALLOWED_HOSTS` / `DJANGO_CSRF_TRUSTED_ORIGINS` — Django rejects
+   requests whose Host it does not recognise.
+3. Build and start:
+   ```bash
+   ./etc/build.sh
+   ./etc/deploy.sh
+   ```
+4. Create Neida's account — on the VPS, since that database is its own:
+   ```bash
+   ./etc/remote.sh exec web python manage.py createsuperuser
+   ```
+5. Cloudflare: an A record to the VPS IP, proxied.
+
+There is no data import step. The sections are created by the entrypoint, and
+everything else is entered through the admin — so nothing needs migrating from
+your machine, and nothing you typed locally while testing follows you into
+production.
+
+**TLS.** nginx here listens on port 80 only. Cloudflare must therefore reach the
+origin over HTTP — SSL mode "Flexible" — unless you terminate TLS at the origin
+too. Match whatever already works for graze.
+
+### Updating
+
+```bash
+git push
+./etc/build.sh      # pulls and rebuilds on the VPS
+./etc/deploy.sh     # restarts; migrations run on start
 ```
 
 Both scripts take `VPS_HOST` and `DEPLOY_PATH` from the environment, defaulting
