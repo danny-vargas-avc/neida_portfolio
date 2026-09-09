@@ -50,7 +50,11 @@ export default defineNuxtConfig({
       title: SITE_NAME,
       meta: [
         { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        // viewport-fit=cover is what makes env(safe-area-inset-*) report real
+        // numbers instead of zero. It has to be in the served HTML: set later
+        // from script, the first paint lays out with insets of zero and the
+        // page renders under the notch before jumping once it applies.
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
         { name: 'description', content: SITE_TAGLINE },
 
         // The name is the headline and the tagline the subtitle: a link is

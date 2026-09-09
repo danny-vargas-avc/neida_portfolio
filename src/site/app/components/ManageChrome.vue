@@ -49,10 +49,12 @@ useHead({
     // The portal is hers alone; keep it out of search results.
     { name: 'robots', content: 'noindex, nofollow' },
   ],
-  // viewport-fit=cover is what makes env(safe-area-inset-*) report real values,
-  // which is what keeps the header out from under the notch.
-  viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
 })
+
+// Marks the document as the portal's while any portal screen is mounted, and
+// releases it on the way out so the public site keeps its own ground.
+onMounted(() => document.documentElement.classList.add('mg-app'))
+onUnmounted(() => document.documentElement.classList.remove('mg-app'))
 
 // The header gains its rule only once the page has moved, so a short screen
 // never shows a line under a header with nothing above it.

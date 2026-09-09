@@ -200,6 +200,17 @@ useHead(() => ({
 </template>
 
 <style scoped>
+/*
+  The page now extends under the notch and the home indicator — that is what
+  viewport-fit=cover buys, and the price is that the insets have to be paid
+  back explicitly. Added to the existing padding rather than replacing it, so
+  a phone with no notch is unchanged.
+*/
+.page {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 .masthead {
   padding-block: clamp(2rem, 6vh, 4rem) var(--space-m);
   text-align: center;

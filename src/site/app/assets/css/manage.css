@@ -117,6 +117,25 @@ html.mg-dark .mg-photo-index { background: rgb(0 0 0 / 0.6); }
    is a link, so that turns a list into a page of underlined text. */
 .mg a { text-decoration: none; color: inherit; }
 
+/*
+  The portal paints the document, not only its own box.
+
+  body carries the public site's near-white ground and html carries nothing, so
+  anywhere .mg does not reach — the rubber-band area past the end of a scroll,
+  or the strip below a short screen — the page showed white under a dark app.
+  Painting the root means there is nothing behind the portal to show through.
+
+  Set on <html> because that is the element the browser uses for the overscroll
+  area; body is made transparent so it does not cover it back up.
+*/
+html.mg-app { background: #f4f3f1; }
+html.mg-app.mg-dark { background: #16151a; }
+html.mg-app body { background: transparent; }
+
+/* Keeps a scroll that runs out of page from dragging the whole app, which in a
+   standalone window looks like the app itself coming loose. */
+html.mg-app body { overscroll-behavior-y: none; }
+
 /* --- structure ------------------------------------------------------------ */
 
 .mg-shell {
