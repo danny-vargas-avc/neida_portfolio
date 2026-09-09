@@ -207,16 +207,27 @@ any subcommand and work from any directory.
    ```bash
    ./etc/remote.sh exec web python manage.py createsuperuser
    ```
-5. Cloudflare: an A record to the VPS IP, proxied.
+5. Cloudflare Tunnel, so this needs no inbound port and graze keeps :80:
+   Zero Trust → Networks → Tunnels → create one, add a public hostname for
+   `neidarodriguez.com` pointing at `http://nginx:80`, and put the token in
+   `CLOUDFLARE_TUNNEL_TOKEN`. The deploy scripts start it; a local
+   `./etc/compose.sh up` does not.
+
+   No DNS record to add by hand — the tunnel creates it.
 
 There is no data import step. The sections are created by the entrypoint, and
 everything else is entered through the admin — so nothing needs migrating from
 your machine, and nothing you typed locally while testing follows you into
 production.
 
-**TLS.** nginx here listens on port 80 only. Cloudflare must therefore reach the
-origin over HTTP — SSL mode "Flexible" — unless you terminate TLS at the origin
-too. Match whatever already works for graze.
+**TLS.** Cloudflare terminates it and reaches the stack through the tunnel, so
+nothing needs a certificate on the VPS and no port is exposed. nginx passes the
+scheme the visitor actually used through to Django, without which Django treats
+the request as insecure and rejects the admin login on CSRF.
+
+**Sharing graze's VPS.** The tunnel is what makes this safe: nothing binds a
+public port, so graze's nginx keeps :80 and neither project's config touches the
+other. `HTTP_BIND` stays on localhost, for curling the stack from the box.
 
 ### Updating
 

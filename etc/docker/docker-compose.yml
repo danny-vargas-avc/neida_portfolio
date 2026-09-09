@@ -22,10 +22,10 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     ports:
-      # Whole mapping, so it can be a bare port or an address. Graze also binds
-      # host :80, so putting both on one VPS needs this changed here — set
-      # HTTP_BIND=127.0.0.1:8081 and route by hostname from a shared proxy in
-      # front. Left alone, this stack takes :80 as the only thing on the box.
+      # Whole mapping, so it can be a bare port or an address. Sharing a box
+      # with graze — which binds 0.0.0.0:80 — means binding localhost only:
+      # HTTP_BIND=127.0.0.1:8081. Nothing outside needs to reach this when the
+      # tunnel is in use; it is kept for curling the stack from the VPS itself.
       - "${HTTP_BIND:-80}:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
@@ -33,6 +33,22 @@ services:
       - media_data:/app/media:ro
     depends_on:
       - web
+
+  # Reaches Cloudflare by connecting outward, so the site needs no inbound port
+  # and no share of :80 — which is what lets this sit on graze's VPS without
+  # touching graze at all. Behind a profile so a local `up` does not try to
+  # start it: only the deploy scripts ask for it.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    profiles: ["tunnel"]
+    # Soft default, not `:?required`: compose interpolates every service when it
+    # parses the file, including ones whose profile is inactive, so demanding
+    # the variable broke every local command too. Without a token cloudflared
+    # says so itself, and only when it is actually asked to run.
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - nginx
 
 volumes:
   frontend_dist:

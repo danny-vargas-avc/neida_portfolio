@@ -9,8 +9,9 @@
 # createsuperuser cannot prompt for a password.
 set -e
 
-VPS_HOST="${VPS_HOST:-neida}"
+# Shares graze's VPS; the tunnel is what keeps them out of each other's way.
+VPS_HOST="${VPS_HOST:-graze}"
 DEPLOY_PATH="${DEPLOY_PATH:-/opt/neida}"
-COMPOSE="docker compose -f etc/docker/docker-compose.yml --env-file etc/docker/.env.production"
+COMPOSE="docker compose --profile tunnel -f etc/docker/docker-compose.yml --env-file etc/docker/.env.production"
 
 ssh -t "$VPS_HOST" "cd $DEPLOY_PATH && $COMPOSE $*"
