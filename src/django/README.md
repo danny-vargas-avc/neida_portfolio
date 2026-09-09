@@ -43,10 +43,13 @@ cd src/django && ./.venv/bin/python manage.py changepassword <her-username>
 cannot sign in there. For the live one, create it inside the container:
 
 ```bash
-docker compose -f etc/docker/docker-compose.yml \
-  --env-file etc/docker/.env.production \
-  exec web python manage.py createsuperuser
+./etc/compose.sh up -d                                    # if not already running
+./etc/compose.sh exec web python manage.py createsuperuser
 ```
+
+`compose.sh` works from any directory. Running the raw `docker compose` command
+from a subdirectory resolves its paths against the wrong place and fails with a
+doubled path like `etc/etc/docker/.env.production`.
 
 ## What she can edit
 

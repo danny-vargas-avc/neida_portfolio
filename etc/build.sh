@@ -4,6 +4,7 @@ set -e
 
 VPS_HOST="${VPS_HOST:-neida}"
 DEPLOY_PATH="${DEPLOY_PATH:-/opt/neida}"
+# Paths are relative to DEPLOY_PATH, which the ssh command cds into first.
 COMPOSE="docker compose -f etc/docker/docker-compose.yml --env-file etc/docker/.env.production"
 
 echo "==> Pulling latest on $VPS_HOST..."

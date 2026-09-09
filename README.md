@@ -176,6 +176,16 @@ cp etc/docker/.env.production.example etc/docker/.env.production   # then fill i
 ./etc/deploy.sh     # ssh, docker compose up -d
 ```
 
+To run the stack locally, or to reach into a running one, use `./etc/compose.sh`
+— it takes any docker compose subcommand and works from any directory:
+
+```bash
+./etc/compose.sh up -d
+./etc/compose.sh exec web python manage.py createsuperuser
+./etc/compose.sh logs -f web
+./etc/compose.sh down
+```
+
 Both scripts take `VPS_HOST` and `DEPLOY_PATH` from the environment, defaulting
 to `neida` and `/opt/neida`.
 
