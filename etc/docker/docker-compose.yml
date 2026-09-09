@@ -2,6 +2,15 @@
 # editor, so SQLite on a volume is ample and Postgres would be a service to run,
 # back up and upgrade for no benefit. Backing up is copying one file.
 
+# Pinned, and load-bearing. Compose otherwise names the project after the
+# directory holding this file — "docker" — and graze, which shares the VPS and
+# the same etc/docker/ layout, is already running under that name. Deploying
+# without this does not start a second stack: it adopts graze's, recreating its
+# web and nginx containers with these images, orphaning its database, and
+# sharing its frontend_dist and media_data volumes. Renaming this later would
+# strand the volumes holding Neida's uploads and database under the old prefix.
+name: neida
+
 services:
   web:
     build:
