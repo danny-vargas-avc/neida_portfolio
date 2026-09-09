@@ -6,24 +6,26 @@ refreshes, it's there — no publish step, no rebuild.
 
 ## Running it
 
+From the project root:
+
 ```bash
-cd server
-python3.12 -m venv .venv
-./.venv/bin/pip install -r requirements.txt
-./.venv/bin/python manage.py migrate
-./.venv/bin/python manage.py seed_sections   # first time only
-./.venv/bin/python manage.py runserver
+./etc/start.sh                  # creates the venv, migrates, serves :8000
+cd src/site && npm run dev      # the site on :3000
 ```
 
-Admin at http://127.0.0.1:8000/admin/ · feed at `/api/content/`.
+Admin at http://127.0.0.1:8000/admin/ · feed at `/api/content/`. Both need to be
+running.
 
-The site needs **both** servers running: this one, and `npm run dev` in the
-project root.
+> A virtualenv hardcodes an absolute path into every script it contains, so
+> moving or cloning the project leaves one that looks fine but cannot run — and
+> the error is misleading, because the shebang is truncated at the kernel's
+> length limit and names a path that never existed. `start.sh` checks the venv
+> actually runs, not just that the folder is there, and rebuilds it if not.
 
 ## Making Neida an account
 
 ```bash
-cd server
+cd src/django
 ./.venv/bin/python manage.py createsuperuser
 ```
 
@@ -34,7 +36,16 @@ repo contains a password, and nothing should.
 If she ever forgets it:
 
 ```bash
-./.venv/bin/python manage.py changepassword <her-username>
+cd src/django && ./.venv/bin/python manage.py changepassword <her-username>
+```
+
+**The deployed site has its own separate database.** An account made locally
+cannot sign in there. For the live one, create it inside the container:
+
+```bash
+docker compose -f etc/docker/docker-compose.yml \
+  --env-file etc/docker/.env.production \
+  exec web python manage.py createsuperuser
 ```
 
 ## What she can edit

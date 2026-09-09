@@ -10,9 +10,19 @@ set -e
 
 cd "$(dirname "$0")/../src/django"
 
+# A virtualenv bakes an absolute path into every script's shebang, so moving or
+# cloning the project leaves one that looks present but cannot run — and the
+# error is baffling, because the shebang gets truncated at the kernel's length
+# limit and reports a path that was never real ("bad interpreter: .../serve").
+# Test that it actually runs rather than that the directory exists.
+if [ -d .venv ] && ! ./.venv/bin/python -c "" >/dev/null 2>&1; then
+    echo "==> Virtualenv points somewhere that no longer exists; rebuilding..."
+    rm -rf .venv
+fi
+
 if [ ! -d .venv ]; then
     echo "==> Creating virtualenv..."
-    python3.12 -m venv .venv
+    "${PYTHON:-python3.12}" -m venv .venv
     ./.venv/bin/pip install --quiet --upgrade pip
 fi
 
