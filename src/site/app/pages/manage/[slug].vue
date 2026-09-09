@@ -103,6 +103,8 @@ async function upload(file: File) {
 
 const editing = ref<ManagePiece | null>(null)
 const draft = ref<Partial<ManagePiece>>({})
+// Declared before close(), which resets it.
+const confirmingDelete = ref(false)
 
 function open(piece: ManagePiece) {
   editing.value = piece
@@ -131,7 +133,6 @@ onMounted(() => document.addEventListener('keydown', onKey))
 onUnmounted(() => document.removeEventListener('keydown', onKey))
 
 const savingPiece = ref(false)
-const confirmingDelete = ref(false)
 
 async function savePiece() {
   const piece = editing.value
@@ -184,12 +185,6 @@ async function movePiece(fromIndex: number, toIndex: number) {
 }
 
 const sort = useSortablePhotos(movePiece)
-
-/** A drag that just ended must not also open the photo. */
-function tapPhoto(piece: ManagePiece) {
-  if (sort.swallowedClick()) return
-  open(piece)
-}
 
 // Short labels: the segmented control has a third of the width each, and
 // "Taller than wide" wraps to three lines at that size.
@@ -275,6 +270,7 @@ useHead(() => ({ title: `${current.value?.title ?? 'Section'} — Manage` }))
         @pointermove="sort.onPointerMove"
         @pointerup="sort.onPointerUp"
         @pointercancel="sort.onPointerUp"
+        @click.capture="sort.onClickCapture"
       >
         <button
           v-for="(piece, i) in current.pieces"
@@ -289,7 +285,7 @@ useHead(() => ({ title: `${current.value?.title ?? 'Section'} — Manage` }))
             ? { transform: `translate(${sort.shift.x}px, ${sort.shift.y}px) scale(1.06)` }
             : undefined"
           @pointerdown="sort.onPointerDown($event, i)"
-          @click="tapPhoto(piece)"
+          @click="open(piece)"
         >
           <img :src="piece.thumbnail || piece.image" :alt="piece.alt || piece.title" draggable="false">
           <span v-if="current.pieces.length > 1" class="mg-photo-index">{{ i + 1 }}</span>

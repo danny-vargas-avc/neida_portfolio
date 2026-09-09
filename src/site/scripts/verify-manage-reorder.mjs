@@ -75,8 +75,11 @@ const after = await order()
 step('the order actually changed', after[0] === before[1] && after[1] === before[0], after.join(' | '))
 
 // --- the drop must not also open the editor -------------------------------
-const sheetOpen = await page.locator('[role="dialog"]').count()
-step('dropping does not open the photo', sheetOpen === 0)
+// Reports which dialog, not just that there is one — the difference between
+// "the drag opened the editor" and "something else is on screen".
+const dialogs = await page.evaluate(() =>
+  [...document.querySelectorAll('[role="dialog"]')].map((d) => d.getAttribute('aria-label') || d.className))
+step('dropping does not open the photo', dialogs.length === 0, dialogs.join(' | '))
 
 // --- a plain tap still opens it -------------------------------------------
 await page.waitForTimeout(500)

@@ -161,10 +161,21 @@ export function useSortablePhotos(commit: (from: number, to: number) => void) {
     reset()
   }
 
-  /** True when a click should be ignored because it closed a drag. */
-  function swallowedClick() {
-    return performance.now() < blockClickUntil
+  /**
+   * Eats the click that ends a drag, before it reaches the tile.
+   *
+   * Bound in the capture phase deliberately. Checking a flag inside the tile's
+   * own click handler depends on that handler running after pointerup, and a
+   * reorder replaces the tiles — so the click can land on an element Vue only
+   * just created, in an order that is not guaranteed. Stopping it on the way
+   * down does not care about either.
+   */
+  function onClickCapture(event: MouseEvent) {
+    if (performance.now() < blockClickUntil) {
+      event.stopPropagation()
+      event.preventDefault()
+    }
   }
 
-  return { from, over, shift, onPointerDown, onPointerMove, onPointerUp, swallowedClick }
+  return { from, over, shift, onPointerDown, onPointerMove, onPointerUp, onClickCapture }
 }
