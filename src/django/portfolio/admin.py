@@ -48,7 +48,19 @@ def thumbnail(image, *, height: int = 60):
     )
 
 
-class PieceInline(TabularInline):
+class PieceInline(StackedInline):
+    """
+    Stacked rather than tabular, for the phone.
+
+    As a table this was seven columns roughly 890px wide, which on a phone became
+    a 356px window onto it: the picture and the filename were visible and the
+    title, year, shape and description were all off to the right, reachable only
+    by scrolling a small box sideways with no headings in view. Adding a
+    photograph from her phone is the single thing this admin exists to do, so
+    that is the layout that has to be right. Stacked is taller on a desktop, and
+    worth it.
+    """
+
     model = Piece
     extra = 1
     fields = ("preview", "image", "title", "year", "orientation", "alt", "order")
@@ -122,6 +134,19 @@ class SectionAdmin(ModelAdmin):
             },
         ),
     )
+
+    def has_add_permission(self, request):
+        # The sections are the leaves on the drawing, and the drawing is fixed.
+        # A ninth section would have no leaf to click on, so it could never be
+        # reached; the model already limits the slug to the eight that exist,
+        # which left "add" offering a duplicate of one of them and nothing else.
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Deleting one does not remove its leaf — the leaf is drawn into the
+        # artwork — it just stops the leaf doing anything when clicked. Hiding
+        # is what she actually wants, and "Visible on the site" already does it.
+        return False
 
     def get_inlines(self, request, obj=None):
         """Show only the inline that suits this section's layout."""
