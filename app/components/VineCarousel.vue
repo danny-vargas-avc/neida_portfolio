@@ -12,9 +12,8 @@
  * compositor instead, so they stay smooth however intricate the drawing is.
  *
  * So: the vine fades and settles in as one element, and lighting a leaf fades in
- * colour UNDERNEATH the drawing, so the pen lines stay black on top of it and it
- * reads as the leaf having been coloured in rather than as a UI state. Only
- * opacity animates, which is what keeps it cheap.
+ * a tinted, heavily stroked copy clipped to that blade. The clip is static —
+ * only opacity moves — which is what keeps it cheap.
  *
  * The idle spin rotates an inner wrapper rather than the faded element, so the
  * entrance and the spin never fight over the same transform. Hovering a leaf
@@ -48,6 +47,7 @@ const reduced = useReducedMotion()
 // Unique per instance so two vines on a page can't collide over element ids.
 const uid = useId()
 const artId = `vine-art-${uid}`
+const clipId = (slug: string) => `vine-clip-${uid}-${slug}`
 
 /**
  * Take the inner <g> (which carries potrace's translate/scale transform) and
@@ -88,29 +88,6 @@ watch(litLeaf, (leaf) => {
   if (leaf) lastLit.value = leaf
 })
 const shownLeaf = computed(() => litLeaf.value ?? lastLit.value)
-
-/**
- * Colour is laid on in two passes, each nudged off the outline.
- *
- * A single shape filled exactly to the line reads as a digital fill. Offsetting
- * and rotating each pass a little leaves colour slightly over the line in places
- * and short of it in others, and the overlap between the two makes the density
- * uneven — which is what going over a patch twice with a pencil actually looks
- * like.
- */
-const WASH_PASSES = [
-  { rotate: -2.4, dx: 2, dy: -1.5, scale: 0.95, opacity: 0.3 },
-  { rotate: 3.1, dx: -1.5, dy: 2, scale: 0.91, opacity: 0.26 },
-]
-
-function washTransform(leaf: Leaf, pass: (typeof WASH_PASSES)[number]) {
-  return (
-    `translate(${leaf.cx + pass.dx} ${leaf.cy + pass.dy}) ` +
-    `rotate(${pass.rotate}) scale(${pass.scale}) ` +
-    `translate(${-leaf.cx} ${-leaf.cy})`
-  )
-}
-
 
 /** That leaf's own colour, so hovering previews where you're about to go. */
 const tintColor = computed(() =>
@@ -245,31 +222,47 @@ onBeforeUnmount(() => {
         >
           <defs>
             <g :id="artId" v-html="artInner" />
+
+            <!--
+              Clipped to the blade itself, not the hit-area ellipse. Cake and
+              florals sit inside the wreath, where an ellipse would also enclose
+              lengths of vine and colour them along with the leaf.
+            -->
+            <clipPath v-for="leaf in leaves" :id="clipId(leaf.slug)" :key="leaf.slug">
+              <path :d="leafOutline(leaf)" />
+            </clipPath>
           </defs>
 
+          <use :href="`#${artId}`" />
+
           <!--
-            Colour goes UNDER the drawing so the pen lines stay black on top of
-            it, the way a coloured-in drawing actually looks. Tinting the ink
-            itself read as a UI state; this reads as the leaf having been
-            coloured in.
+            The lit leaf: a second copy of the drawing clipped to that blade and
+            tinted, faded in by CSS. Painted last so it sits over the vine — cake
+            and florals overlap the ring itself, and SVG has no z-index, so
+            document order is the stacking order.
+
+            Keyed on `shownLeaf`, which holds the last lit leaf through the
+            fade-out. Dropping the clip the moment nothing is lit tinted the
+            WHOLE drawing for the length of the transition.
+
+            The clip never animates; only opacity does. That is what keeps this
+            cheap however intricate the drawing is.
           -->
           <g
             v-if="shownLeaf"
-            class="wash"
+            class="tint"
             :class="{ 'is-lit': !!litLeaf }"
+            :clip-path="`url(#${clipId(shownLeaf.slug)})`"
             :style="{ color: tintColor }"
           >
-            <path
-              v-for="(pass, i) in WASH_PASSES"
-              :key="i"
-              :d="leafOutline(shownLeaf)"
-              :transform="washTransform(shownLeaf, pass)"
-              :opacity="pass.opacity"
-              fill="currentColor"
-            />
+            <!--
+              Stroked as well as filled, and heavily: the artwork is fine pen
+              line, so recolouring it alone was far too quiet to notice. The
+              stroke roughly doubles the lit blade's line weight, which is what
+              actually makes it obvious.
+            -->
+            <use :href="`#${artId}`" stroke="currentColor" stroke-width="3.2" />
           </g>
-
-          <use :href="`#${artId}`" />
 
         </svg>
 
@@ -332,7 +325,7 @@ onBeforeUnmount(() => {
   overflow: visible;
 }
 
-.wash {
+.tint {
   opacity: 0;
   /* Colour is set inline from the leaf's own accent.
 
@@ -344,7 +337,7 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-.wash.is-lit {
+.tint.is-lit {
   opacity: 1;
 }
 
